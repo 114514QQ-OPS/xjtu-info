@@ -63,12 +63,19 @@ SOURCE_WEIGHT = {
     "就业中心": 2,
     "图书馆": 1,
     "书院": 1,
+    "华为招聘": 2,
     "其他": 1,
 }
 
 GRADE_ORDER = {"大一": 1, "大二": 2, "大三": 3, "大四": 4, "研究生": 5}
 
-CATEGORIES = ["教务", "奖助", "竞赛", "科研", "就业", "讲座", "生活", "其他"]
+CATEGORIES = ["教务", "奖助", "竞赛", "科研", "就业", "讲座", "生活", "招聘", "其他"]
+
+# 招聘类（企业岗位）走一套不同的规则：
+#   学校通知看的是"有没有截止日期、要不要交材料"，
+#   岗位看的是"这活儿是不是给学生的、什么时候过期"。
+# 所以这类直接跳过关键词硬规则，靠 deadline + 来源权重打分。
+JOB_CATS = {"招聘"}
 
 PUBLISH_WINDOW_DAYS = 60      # 发布超过这么多天的，不进主列表
 DEDUP_THRESHOLD = 0.82        # 标题相似度超过这个值视为同一条
@@ -181,6 +188,10 @@ def hard_filter(item: dict) -> tuple[bool, str]:
     body = (item.get("body_text") or "")[:800]
     text = title + body
 
+    # 招聘岗位天然不含"报名/申请"这类词，用学校通知的规则筛会把它们全杀光
+    if item.get("category") in JOB_CATS:
+        return True, "招聘类，跳过关键词规则"
+
     for w in DROP_WORDS:
         if w in title:
             return False, f"标题含排除词「{w}」"
@@ -215,8 +226,11 @@ def score_item(item: dict, grade: str, today: date) -> dict:
         rel = 1 if near else 0
 
     # 2) 行动性：命中多少个行动词
-    n = sum(1 for w in KEEP_WORDS if w in text)
-    act = 3 if n >= 3 else 2 if n == 2 else 1 if n == 1 else 0
+    if item.get("category") in JOB_CATS:
+        act = 2          # 岗位本身就是"可以去投"的东西，固定给 2 分
+    else:
+        n = sum(1 for w in KEEP_WORDS if w in text)
+        act = 3 if n >= 3 else 2 if n == 2 else 1 if n == 1 else 0
 
     # 3) 时效性：距截止几天
     dl = parse_date(item.get("deadline"), today)
@@ -250,7 +264,7 @@ def decide(item: dict, grade: str, today: date) -> dict:
     # 时间窗口放最前面：一条 2019 年的通知，不管它截止没截止、受众对不对，
     # 都不该出现在 feed 里。这个判断必须在「已过截止」「受众不符」之前，
     # 否则它们会先被归到「归档」，永远绕开窗口检查。
-    if pub and (today - pub).days > PUBLISH_WINDOW_DAYS:
+    if pub and (today - pub).days > PUBLISH_WINDOW_DAYS and item.get("category") not in JOB_CATS:
         s["bucket"], s["reason"] = "丢弃", f"发布已 {(today - pub).days} 天，超出 {PUBLISH_WINDOW_DAYS} 天窗口"
         return s
 
@@ -290,7 +304,7 @@ def decide(item: dict, grade: str, today: date) -> dict:
 #   ② 在这里的 GROUP_BY_CATEGORY 加一行映射（比如 {"实习": "实习机会"}）
 # 前端不用改——标签页是按数据里出现过哪些 group 自动长出来的。
 GROUP_DEFAULT = "学校通知"
-GROUP_BY_CATEGORY: dict[str, str] = {}
+GROUP_BY_CATEGORY: dict[str, str] = {"招聘": "就业"}
 
 
 def process(raw: list, grade: str = "大一", today: date | None = None) -> dict:
