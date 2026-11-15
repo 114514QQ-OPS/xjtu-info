@@ -49,6 +49,22 @@ def fetch(url: str) -> str:
     return raw.decode("utf-8", "ignore")
 
 
+def fetch_json(url: str) -> str:
+    """给华为招聘接口用：它挑 UA，而且必须带 Referer + X-Requested-With。
+
+    用普通 fetch() 直接访问会 403 —— 这个坑值得记一笔。
+    """
+    req = urllib.request.Request(url, headers={
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"),
+        "Referer": "https://career.huawei.com/reccampportal/portal5/campus-recruitment.html",
+        "Accept": "application/json, text/plain, */*",
+        "X-Requested-With": "XMLHttpRequest",
+    })
+    with urllib.request.urlopen(req, timeout=25, context=CTX) as resp:
+        return resp.read().decode("utf-8", "ignore")
+
+
 def to_text(h: str) -> str:
     """把 HTML 变成纯文字：去掉脚本、样式、标签，合并空白。"""
     h = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", h)
@@ -356,12 +372,89 @@ def crawl_detail(item: dict, today: date, source_name: str = "教务处") -> dic
     return item
 
 
+# ---------------------------------------------------------------- 华为招聘
+# 华为校招官网（career.huawei.com）是个 Vue 单页应用，页面上根本没有职位数据，
+# 全靠 js 里的 jb.findJobList() 去打一个接口。接口路径是我从
+# HwPortalReccamp.js 里翻出来的：
+#   services/portal/portalpub/getJob/newHr/page/{pageSize}/{curPage}
+# 踩过的四个坑：
+#   ① jobType 是"招聘类型"：0=校园招聘、1=社会招聘。我们只要 0。
+#      传 1 会返回社招热招职位（要求 3 年经验），那是另一个池子。
+#   ② jobTypes 是"项目类型"：1=应届生、2=实习生、3=留学生，得分开问三遍。
+#   ③ 必须带 reqTime（毫秒时间戳）且放在 query 里；用 POST 放 body 会 405。
+#   ④ 这个源返回的就是结构化 JSON，不需要再开详情页（detail=False）。
+HUAWEI_JOB_API = ("https://career.huawei.com/reccampportal/services/portal/"
+                  "portalpub/getJob/newHr/page/20/1")
+
+HUAWEI_JOB_TYPE_NAME = {"1": "应届生", "2": "实习生", "3": "留学生"}
+
+
+def huawei_item(j: dict, jt: str) -> dict:
+    """把华为接口返回的一条职位，翻译成我们自己的条目格式。"""
+    jid = j.get("jobId")
+    title = (j.get("jobname") or j.get("nameCn") or "").strip()
+    area = (j.get("jobArea") or "").replace("/", "·")
+    fam = j.get("jobFamilyName") or ""
+    dept = j.get("deptName") or ""
+    degree = {1: "大专", 2: "本科", 3: "硕士", 4: "博士"}.get(j.get("degree"), "")
+    exp = j.get("workYear")
+    biz = (j.get("mainBusiness") or "").strip()
+    req = (j.get("jobRequire") or "").strip()
+
+    bits = [x for x in (area, fam, degree, ("%s 年经验" % exp) if exp else "") if x]
+    head = " · ".join(bits)
+    summary = re.sub(r"\s+", " ", (head + "。" + biz) if (head and biz) else (head or biz))[:120]
+
+    return {
+        "title": title,
+        "url": ("https://career.huawei.com/reccampportal/portal5/"
+                "campus-recruitment-detail.html?jobId=%s&dataSource=1" % jid),
+        "published_at": (j.get("releaseDate") or "")[:10] or None,
+        "deadline": (j.get("expirationDate") or "")[:10] or None,
+        "summary": summary or None,
+        "body_text": (biz + " " + req)[:2000],
+        "audience": ["不限"],
+        "category": "招聘",
+        "category_raw": "招聘",
+        "group": "就业",
+        "source": "华为招聘",
+        "source_type": "华为招聘",
+        "job_type": HUAWEI_JOB_TYPE_NAME.get(jt, ""),
+        "job_area": area or None,
+        "job_dept": dept or None,
+    }
+
+
+def huawei_jobs(_url=None, max_items: int = 40) -> list:
+    """华为校招职位。三个项目类型分开问，按 jobId 去重。"""
+    out, seen = [], set()
+    for jt in ("1", "2", "3"):
+        url = ("%s?jobType=0&jobTypes=%s&language=zh_CN&curPage=1&pageSize=20"
+               "&reqTime=%d" % (HUAWEI_JOB_API, jt, int(time.time() * 1000)))
+        try:
+            data = json.loads(fetch_json(url))
+        except Exception as e:
+            print("  [华为招聘] %s 接口失败 %s: %s"
+                  % (HUAWEI_JOB_TYPE_NAME[jt], type(e).__name__, e))
+            continue
+        rows = data.get("result") or []
+        print("  [华为招聘] %s 当前开放 %d 条" % (HUAWEI_JOB_TYPE_NAME[jt], len(rows)))
+        for j in rows:
+            jid = j.get("jobId")
+            if not jid or jid in seen:
+                continue
+            seen.add(jid)
+            out.append(huawei_item(j, jt))
+    return out[:max_items]
+
+
 # 站点注册表：以后加一个新来源，就在这里加一行，别的都不用动
 SOURCES = [
     {"name": "教务处", "url": LIST_URL, "parser": parse_list, "key": "jwc"},
     {"name": "学生处", "url": "https://xsc.xjtu.edu.cn/xgdt/tzgg.htm", "parser": parse_list_xsc, "key": "xsc"},
     {"name": "电信学部", "url": "http://eieug.xjtu.edu.cn/tzgg.htm", "parser": parse_list_eieug, "key": "eieug"},
     {"name": "南洋书院", "url": "http://nanyang.xjtu.edu.cn/xwtz/tzgg.htm", "parser": parse_list_nanyang, "key": "ny"},
+    {"name": "华为招聘", "url": HUAWEI_JOB_API, "parser": huawei_jobs, "key": "huawei", "detail": False},
 ]
 
 
@@ -383,11 +476,16 @@ def main() -> int:
             print("  [%s] 列表页失败 %s: %s" % (src["name"], type(e).__name__, e))
             continue
         print("%s 列表页 %d 条，取前 %d 条抓详情" % (src["name"], len(listed), min(args.limit, len(listed))))
-        for i, it in enumerate(listed[: args.limit], 1):
+        cap = len(listed) if src.get("detail") is False else args.limit
+        for i, it in enumerate(listed[:cap], 1):
             if it["url"] in seen_url:
                 continue
             try:
-                it = crawl_detail(it, today, src["name"])
+                if src.get("detail", True):
+                    it = crawl_detail(it, today, src["name"])
+                else:
+                    # JSON 源自己在 parser 里就把字段填好了，不用再开详情页
+                    it.setdefault("source", src["name"])
             except Exception as e:
                 print("  [%s %d] 失败 %s: %s" % (src["name"], i, type(e).__name__, it["title"][:20]))
                 continue
