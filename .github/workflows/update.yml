@@ -1,0 +1,54 @@
+name: 每日更新
+
+on:
+  schedule:
+    # UTC 00:00 = 北京时间 08:00。GitHub 的 cron 有时会延迟几分钟到半小时，正常。
+    - cron: "0 0 * * *"
+  workflow_dispatch:      # 也可以在 Actions 页面手动点一下跑
+
+permissions:
+  contents: write         # 允许 action 把新的 feed.json 提交回仓库
+
+concurrency:
+  group: update
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Shanghai   # 让 python 里的 date.today() 按北京时间算
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 抓取
+        run: python tools/crawl_jwc.py --source all --out tools/raw.json
+
+      - name: 检查抓到的条数
+        run: |
+          python - <<'PY'
+          import json, sys
+          rows = json.load(open("tools/raw.json", encoding="utf-8"))
+          print("抓到", len(rows), "条")
+          # 抓不到东西时直接失败，这样仓库里旧的 feed.json 不会被清空
+          sys.exit(0 if len(rows) >= 3 else 1)
+          PY
+
+      - name: 过滤
+        run: python tools/filter_rules.py --input tools/raw.json --output feed.json
+
+      - name: 提交
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add feed.json
+          if git diff --cached --quiet; then
+            echo "数据没变化，跳过提交"
+          else
+            git commit -m "update feed: $(date +%F)"
+            git push
+          fi
