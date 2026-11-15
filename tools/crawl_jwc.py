@@ -1,0 +1,407 @@
+# -*- coding: utf-8 -*-
+"""
+crawl_jwc.py —— 抓西安交通大学教务处的"教学通知"
+
+它干四件事：
+    1. 打开列表页，把每个通知的链接和发布日期抓下来
+    2. 逐条打开详情页，取正文（用来判断有没有截止日期、给谁看的）
+    3. 从正文里找截止日期和年级
+    4. 存成 raw.json
+
+跑法：
+    python crawl_jwc.py            # 默认抓列表第一页 + 前 12 条详情
+    python crawl_jwc.py --limit 5  # 少抓几条试试
+
+只用标准库 urllib，不需要 pip install 任何东西。
+"""
+import argparse
+import html as html_lib
+import json
+import re
+import ssl
+import sys
+import time
+import urllib.request
+from datetime import date
+from pathlib import Path
+from urllib.parse import urljoin
+
+BASE = "https://jwc.xjtu.edu.cn/"
+LIST_URL = "https://jwc.xjtu.edu.cn/jxxx/jxtz2.htm"
+
+# 有些学校的证书链不全，关掉校验才能连上（只影响本校站点，可以接受）
+CTX = ssl.create_default_context()
+CTX.check_hostname = False
+CTX.verify_mode = ssl.CERT_NONE
+
+
+def fetch(url: str) -> str:
+    """打开一个网页，返回它的 HTML 文本。"""
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+    with urllib.request.urlopen(req, timeout=25, context=CTX) as resp:
+        raw = resp.read()
+    # 学校站点编码不统一，挨个试
+    for enc in ("utf-8-sig", "utf-8", "gbk", "gb18030"):
+        try:
+            return raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("utf-8", "ignore")
+
+
+def to_text(h: str) -> str:
+    """把 HTML 变成纯文字：去掉脚本、样式、标签，合并空白。"""
+    h = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", h)
+    h = re.sub(r"(?s)<[^>]+>", " ", h)
+    h = html_lib.unescape(h)
+    return re.sub(r"\s+", " ", h).strip()
+
+
+# -------- 列表页 --------
+
+def parse_list(page_url: str) -> list:
+    """从列表页里抠出 (分类, 标题, 链接, 发布日期)。"""
+    h = fetch(page_url)
+    out = []
+    for block in re.findall(r"(?is)<li[^>]*>(.*?)</li>", h):
+        if "info/" not in block:
+            continue
+        m = re.search(r'href="([^"]+)"', block)
+        if not m:
+            continue
+        href = m.group(1)
+        text = to_text(block)
+        # 列表里长这样：[考试安排] 关于xxx的通知 2026-11-11
+        mm = re.match(r"\[(.+?)\]\s*(.*?)\s*(\d{4}-\d{2}-\d{2})\s*$", text)
+        if not mm:
+            continue
+        cat, title, pub = mm.group(1), mm.group(2), mm.group(3)
+        out.append({
+            "category_raw": cat,
+            "title": title.rstrip("…").rstrip(".").strip(),
+            "url": urljoin(page_url, href),
+            "published_at": pub,
+        })
+    # 同一链接在页面上可能出现两次（图片版+文字版），去重
+    seen, uniq = set(), []
+    for it in out:
+        if it["url"] in seen:
+            continue
+        seen.add(it["url"])
+        uniq.append(it)
+    return uniq
+
+
+def guess_cat_xsc(title: str) -> str:
+    """学生处的列表没有栏目名，只能从标题里猜分类。"""
+    if any(k in title for k in ("奖学金", "助学金", "助学贷款", "资助", "勤工助学", "困难补助", "补助")):
+        return "奖助"
+    if any(k in title for k in ("招聘", "就业", "见习", "实习", "双选会", "宣讲")):
+        return "就业"
+    if any(k in title for k in ("竞赛", "大赛", "比赛", "挑战杯")):
+        return "竞赛"
+    if any(k in title for k in ("讲座", "报告", "沙龙", "培训")):
+        return "讲座"
+    return "其他"
+
+
+def parse_list_xsc(page_url: str) -> list:
+    """学生处列表页。<li> 里长这样：
+
+        04 2026/11 关于xxx的公示[零宽空格]各学院、书院：根据...
+
+    日期是「日 年/月」，跟教务处的「年-月-日」正好反过来；
+    标题和正文摘要之间夹着一个零宽空格（\\u200b），拿它当分隔符。
+    """
+    h = fetch(page_url)
+    out = []
+    for block in re.findall(r"(?is)<li[^>]*>(.*?)</li>", h):
+        if "info/" not in block:
+            continue
+        m = re.search(r'href="([^"]+)"', block)
+        if not m:
+            continue
+        text = to_text(block)
+        mm = re.match(r"(\d{1,2})\s+(\d{4})/(\d{1,2})\s*(.+)$", text)
+        if not mm:
+            continue
+        day, year, mon, rest = mm.group(1), mm.group(2), mm.group(3), mm.group(4)
+        # 列表里标题后面直接粘着正文摘要，中间有时是零宽空格、有时是普通空格，
+        # 甚至什么都没有。所以不靠分隔符，靠"标题一定以这些词收尾"来切。
+        m2 = re.match(r"(.{6,90}?(?:通知|公告|公示|决定|名单|安排|方案|办法|意见|报告|说明|证明|函))"
+                      r"(?=[\s\u200b\u3000]|$)", rest)
+        title = m2.group(1) if m2 else rest.split("\u200b")[0]
+        title = title.strip()
+        if not title:
+            continue
+        out.append({
+            "category_raw": guess_cat_xsc(title),
+            "title": title.rstrip("…").strip(),
+            "url": urljoin(page_url, m.group(1)),
+            "published_at": "%s-%02d-%02d" % (year, int(mon), int(day)),
+        })
+    seen, uniq = set(), []
+    for it in out:
+        if it["url"] in seen:
+            continue
+        seen.add(it["url"])
+        uniq.append(it)
+    return uniq
+
+
+def parse_list_eieug(page_url: str) -> list:
+    """电信学部本科教学网。这一站的列表页有个坑：
+
+        <a href="info/1030/3333.htm" title="标题">
+            <span class="date fr">06-12</span> 标题</a>
+
+    日期只有「月-日」，**没有年份**。所以这里先占个位，等进详情页
+    读到「发布时间：2025-06-12」再补上真正的年份。
+    """
+    h = fetch(page_url)
+    out = []
+    for block in re.findall(r"(?is)<li[^>]*>(.*?)</li>", h):
+        if "info/" not in block:
+            continue
+        m = re.search(r'<a[^>]+href="([^"]+)"[^>]*title="([^"]+)"', block)
+        if not m:
+            continue
+        href, title = m.group(1), html_lib.unescape(m.group(2)).strip()
+        out.append({
+            "category_raw": guess_cat_xsc(title),
+            "title": title.rstrip("…").strip(),
+            "url": urljoin(page_url, href),
+            "published_at": None,        # 详情页补
+        })
+    seen, uniq = set(), []
+    for it in out:
+        if it["url"] in seen:
+            continue
+        seen.add(it["url"])
+        uniq.append(it)
+    return uniq
+
+
+def parse_list_nanyang(page_url: str) -> list:
+    """南洋书院（书院的通知对学生更贴身：宿舍、评优、活动、学代会）。
+
+        <a href="../info/1010/3057.htm" title="标题">标题</a>
+        <span class="date">2020-03-15</span>
+
+    要注意有的条目直接链到公众号（mp.weixin.qq.com），那种没有日期，跳过。
+    """
+    h = fetch(page_url)
+    out = []
+    for m in re.finditer(
+            r'(?is)<a[^>]+href="([^"]+)"[^>]*title="([^"]+)"[^>]*>.*?</a>\s*<span class="date">(\d{4}-\d{2}-\d{2})</span>',
+            h):
+        href, title, pub = m.group(1), html_lib.unescape(m.group(2)).strip(), m.group(3)
+        if "weixin" in href:
+            continue
+        out.append({
+            "category_raw": guess_cat_xsc(title),
+            "title": title.rstrip("…").strip(),
+            "url": urljoin(page_url, href),
+            "published_at": pub,
+        })
+    seen, uniq = set(), []
+    for it in out:
+        if it["url"] in seen:
+            continue
+        seen.add(it["url"])
+        uniq.append(it)
+    return uniq
+
+
+# -------- 详情页 --------
+
+DATE_RE = re.compile(r"(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日|(\d{1,2})\s*月\s*(\d{1,2})\s*日")
+
+# 详情页正文前面都有一段元信息，各站点叫法不一样：
+#   教务处 "发布日期: 2026-11-11 浏览次数: 123"
+#   学生处 "2026-11-04 点击量: "
+# 找到最后一个这样的标记，后面的就是正文。
+# 数字只在后面跟空格时才吃掉，否则会把正文开头的"2026年下半年..."当成浏览量。
+META_RE = re.compile(
+    r"(?:发布日期|发布时间|点击量|点击数|浏览次数|访问量)[:：]?\s*(?:\d{1,6}(?=\s|$))?")
+
+
+def find_deadline(text: str, today: date, pub: date | None = None):
+    """在正文里找截止日期。找不到就返回 None（绝不猜）。
+
+    分两轮找：先只认明确写了"截止"的句子，找不到才退回"XX日前""至X月X日"这种说法。
+    这样能避免把"自发布之日起"里的日期当成截止日期。
+    """
+    # 关键一步：网页里的数字常被标签拆散，变成"202 6 年 1 1 月 30 日"，
+    # 先把所有空白去掉，日期才连得起来。
+    flat = re.sub(r"\s+", "", text)
+    for keywords in (("截止",), ("前", "至")):
+        for sent in re.split(r"[。；;！!\n]", flat):
+            if not any(k in sent for k in keywords):
+                continue
+            found = list(DATE_RE.finditer(sent))
+            if not found:
+                continue
+            # 取句子里最后一个日期："11月5日至11月20日"里 20 号才是截止
+            m = found[-1]
+            d = None
+            try:
+                if m.group(1):
+                    d = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+                else:
+                    mo, dd = int(m.group(4)), int(m.group(5))
+                    for y in (today.year - 1, today.year, today.year + 1):
+                        try:
+                            cand = date(y, mo, dd)
+                        except ValueError:
+                            continue
+                        if d is None or abs((cand - today).days) < abs((d - today).days):
+                            d = cand
+            except ValueError:
+                continue
+            # 截止日期不可能早于发布日期，早于的一定是抽错了
+            if d and pub and d < pub:
+                continue
+            # 恰好等于发布日期 → 多半是把"发布日期"当成截止日期了，宁可留空
+            if d and pub and d == pub:
+                continue
+            if d:
+                return d
+    return None
+
+
+# 2026级=大一, 2025级=大二, 2024级=大三, 2023级=大四
+GRADE_BY_YEAR = {str(date.today().year - i): g for i, g in
+                 enumerate(["大一", "大二", "大三", "大四"])}
+
+
+def find_audience(text: str) -> list:
+    """看正文里提到了哪些年级。一个都没提到，就当"不限"。"""
+    hits = []
+    for token in ("大一", "大二", "大三", "大四"):
+        if token in text:
+            hits.append(token)
+    for year, grade in GRADE_BY_YEAR.items():
+        if year + "级" in text and grade not in hits:
+            hits.append(grade)
+    if not hits or "全体" in text or "所有本科生" in text:
+        return ["不限"] if not hits else hits
+    return hits
+
+
+CAT_MAP = {
+    "竞赛安排": "竞赛", "奖项申报": "奖助", "考试安排": "教务",
+    "培养方案": "教务", "教改项目": "教务", "质量控制": "教务",
+    "实践教学": "科研", "学籍管理": "教务", "选课": "教务",
+    # 学生处那边是从标题猜出来的，已经是最终分类，直接放行
+    "奖助": "奖助", "就业": "就业", "竞赛": "竞赛", "讲座": "讲座", "其他": "其他",
+    # 电信学部/书院 也是这样
+    "教务": "教务", "科研": "科研", "生活": "生活",
+}
+
+
+def crawl_detail(item: dict, today: date, source_name: str = "教务处") -> dict:
+    """打开一条通知的详情页，补上正文、截止日期、受众。"""
+    h = fetch(item["url"])
+    text = to_text(h)
+
+    # 详情页的 <title> 一般是完整标题（列表里会被截断成"..."）
+    m = re.search(r"(?is)<title>(.*?)</title>", h)
+    if m:
+        t = html_lib.unescape(m.group(1)).strip()
+        t = re.sub(r"\s*[-—|]\s*(西安交通大学.*|知心网.*)$", "", t).strip()
+        if len(t) > len(item["title"]):
+            item["title"] = t
+
+    # 摘要：取正文中"标题之后"的那一段。
+    # 详情页最前面是一堆导航（首页/部门简介/...），标题之后才是正文，
+    # 所以用标题当锚点把它切掉。
+    excerpt = ""
+    # 元信息固定长这样："信息来源： 发布日期: 2026-11-11 浏览次数: 123"
+    # 拿"发布日期 + 日期"当锚点最稳（有的页面浏览次数后面根本没数字，
+    # 用 浏览次数 当锚点会把正文开头的年份一起吃掉）。
+    marks = list(re.finditer(META_RE, text))
+    if marks:
+        tail = text[marks[-1].end():]
+        tail = re.sub(r"^[\s:：\-—|、，,。]{0,6}", "", tail)
+        # 网页把每个字塞进独立 span，抽出来全是"学 院（部 、 中心 ）"这种空格，去掉
+        tail = re.sub(r"(?<=[\u4e00-\u9fff0-9%])[ \u3000]+(?=[\u4e00-\u9fff0-9%])", "", tail)
+        excerpt = tail[:110].strip()
+    item["summary"] = excerpt or None
+
+    # 有的站（电信学部本科教学网）列表页只写"06-12"不写年份，
+    # 真正的发布日期要到详情页的「发布时间：2025-06-12」里拿。
+    if not item.get("published_at"):
+        m2 = re.search(r"(?:发布时间|发布日期)[:：]?\s*(20\d{2}-\d{2}-\d{2})", text)
+        if m2:
+            item["published_at"] = m2.group(1)
+        else:
+            m2 = re.search(r"发布时间[:：]\s*(\d{2})-(\d{2})", text)
+            if m2:
+                item["published_at"] = "%d-%s-%s" % (today.year, m2.group(1), m2.group(2))
+
+    pub = None
+    try:
+        if item.get("published_at"):
+            pub = date.fromisoformat(item["published_at"])
+    except (KeyError, ValueError, TypeError):
+        pass
+    dl = find_deadline(text, today, pub)
+    item["deadline"] = dl.isoformat() if dl else None
+    item["body_text"] = text[:2000]
+    item["audience"] = find_audience(item["title"] + text[:1200])
+    item["category"] = CAT_MAP.get(item["category_raw"], "其他")
+    item["source"] = source_name
+    item["source_type"] = source_name
+    return item
+
+
+# 站点注册表：以后加一个新来源，就在这里加一行，别的都不用动
+SOURCES = [
+    {"name": "教务处", "url": LIST_URL, "parser": parse_list, "key": "jwc"},
+    {"name": "学生处", "url": "https://xsc.xjtu.edu.cn/xgdt/tzgg.htm", "parser": parse_list_xsc, "key": "xsc"},
+    {"name": "电信学部", "url": "http://eieug.xjtu.edu.cn/tzgg.htm", "parser": parse_list_eieug, "key": "eieug"},
+    {"name": "南洋书院", "url": "http://nanyang.xjtu.edu.cn/xwtz/tzgg.htm", "parser": parse_list_nanyang, "key": "ny"},
+]
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--source", default="all", choices=["all"] + [s["key"] for s in SOURCES])
+    ap.add_argument("--limit", type=int, default=12, help="每个来源最多抓多少条详情")
+    ap.add_argument("--out", default="raw.json")
+    args = ap.parse_args()
+
+    today = date.today()
+    picked = [s for s in SOURCES if args.source in ("all", s["key"])]
+
+    result, seen_url = [], set()
+    for src in picked:
+        try:
+            listed = src["parser"](src["url"])
+        except Exception as e:
+            print("  [%s] 列表页失败 %s: %s" % (src["name"], type(e).__name__, e))
+            continue
+        print("%s 列表页 %d 条，取前 %d 条抓详情" % (src["name"], len(listed), min(args.limit, len(listed))))
+        for i, it in enumerate(listed[: args.limit], 1):
+            if it["url"] in seen_url:
+                continue
+            try:
+                it = crawl_detail(it, today, src["name"])
+            except Exception as e:
+                print("  [%s %d] 失败 %s: %s" % (src["name"], i, type(e).__name__, it["title"][:20]))
+                continue
+            seen_url.add(it["url"])
+            result.append(it)
+            dl = it["deadline"] or "无截止日期"
+            print("  [%s %d] %s  %-12s %s" % (src["name"], i, it["published_at"], dl, it["title"][:34]))
+            time.sleep(0.4)  # 别把人家服务器打疼
+        print()
+
+    Path(args.out).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    print("已写入 %s（%d 条，来自 %d 个来源）" % (args.out, len(result), len({x["source"] for x in result})))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
