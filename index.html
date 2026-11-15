@@ -285,7 +285,7 @@ footer a{border-bottom:1px solid var(--line-2);}
       healthEl=document.getElementById('health'),
       sNew=document.getElementById('s-new'), sWeek=document.getElementById('s-week'),
       sDate=document.getElementById('s-date');
-  var grp='all', cat='all', asc=true, items=[], list0=[];
+  var grp='all', cat='all', asc=true, items=[], list0=[], shownCount=0;
 
   function esc(v){
     return String(v==null?'':v).replace(/[&<>"]/g,function(c){
@@ -385,6 +385,7 @@ footer a{border-bottom:1px solid var(--line-2);}
       if(ok) shown++;
     });
     empty.style.display = shown ? 'none' : 'block';
+    shownCount = shown;
   }
 
   // 把当前该显示的那批数据整个重画一遍（切大类、加/删收藏都要重画）
@@ -397,6 +398,9 @@ footer a{border-bottom:1px solid var(--line-2);}
     if(grp==='fav' && !arr.length){
       empty.style.display='block';
       empty.innerHTML='<b>还没有收藏</b>在通知右下角点「☆ 收藏」，收藏的都会出现在这里。';
+    }else if(grp==='就业' && !shownCount){
+      empty.style.display='block';
+      empty.innerHTML='<b>就业这一栏还没内容</b>华为 2027 届秋招已经收尾，现在开放岗位 0 个。明年 3 月春招开了，岗位会自动出现在这里。';
     }else{
       empty.innerHTML='<b>没有匹配的通知</b>换个关键词试试，或点「全部」';
     }
@@ -406,6 +410,8 @@ footer a{border-bottom:1px solid var(--line-2);}
   function renderGroups(list){
     var map={};
     list.forEach(function(x){ var g=x.group||'学校通知'; map[g]=(map[g]||0)+1; });
+    // 「就业」是常驻大类：现在没有岗位也要出现，否则用户会以为没做
+    if(!('就业' in map)) map['就业']=0;
     var names=Object.keys(map), html='';
     html+='<button class="gtab" aria-pressed="'+(grp==='all')+'" data-group="all">全部<span class="n">'+list.length+'</span></button>';
     names.forEach(function(g){
