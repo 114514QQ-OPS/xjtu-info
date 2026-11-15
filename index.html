@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>信息差 · 西安交大本科生通知聚合（原型）</title>
+<style>
+:root{
+  --paper:#F6F2EA;
+  --paper-2:#FBF8F2;
+  --ink:#191713;
+  --ink-2:#57514A;
+  --ink-3:#8C857A;
+  --line:#E3DCD0;
+  --line-2:#CFC6B7;
+  --accent:#A9362B;
+  --accent-bg:#F2E3DE;
+  --amber:#8F6314;
+  --amber-bg:#F3E9D6;
+  --green:#3F6353;
+  --green-bg:#E4EBE6;
+  --font-serif:Georgia,"Times New Roman","Songti SC",serif;
+  --font-sans:-apple-system,"Segoe UI","Microsoft YaHei","PingFang SC","Hiragino Sans GB",sans-serif;
+  --r:2px;
+  --sh:0 1px 0 rgba(25,23,19,.04);
+}
+*{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--font-sans);font-size:14px;line-height:1.6;
+  font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none;}
+::selection{background:var(--accent);color:var(--paper-2);}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+.wrap{max-width:1160px;margin:0 auto;padding:0 28px;}
+
+/* ---------- 顶部提示条 ---------- */
+.demo{
+  background:var(--ink);color:#E9E3D8;font-size:11.5px;letter-spacing:.02em;
+  padding:5px 0;text-align:center;
+}
+.demo b{color:#fff;font-weight:600;}
+
+/* ---------- 页头 ---------- */
+header{padding:26px 0 18px;border-bottom:1px solid var(--line-2);}
+.masthead{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+.brand{display:flex;align-items:baseline;gap:12px;}
+.mark{width:9px;height:22px;background:var(--accent);display:inline-block;transform:translateY(2px);}
+h1{margin:0;font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1;}
+.sub{margin-top:8px;font-size:12px;color:var(--ink-3);letter-spacing:.03em;}
+.sub em{font-style:normal;color:var(--ink-2);}
+.headright{display:flex;gap:26px;align-items:flex-end;}
+.stat{text-align:right;}
+.stat b{display:block;font-family:var(--font-serif);font-size:21px;font-weight:400;line-height:1.1;}
+.stat span{font-size:10.5px;letter-spacing:.1em;color:var(--ink-3);}
+
+/* ---------- 控制区 ---------- */
+.controls{
+  padding:0;border-bottom:1px solid var(--line);
+  position:sticky;top:0;background:var(--paper);z-index:5;
+}
+/* 第一行：大类（学校通知…） */
+.groupline{display:flex;align-items:baseline;gap:16px;padding:9px 0 0;}
+.glabel{font-size:10.5px;letter-spacing:.14em;color:var(--ink-3);padding-bottom:9px;flex:none;}
+.groups{display:flex;gap:20px;flex-wrap:wrap;}
+.gtab{
+  font:inherit;font-size:13px;color:var(--ink-3);background:none;border:0;
+  padding:0 0 9px;cursor:pointer;position:relative;letter-spacing:.01em;
+}
+.gtab:hover{color:var(--ink);}
+.gtab[aria-pressed="true"]{color:var(--ink);font-weight:600;}
+.gtab[aria-pressed="true"]::after{
+  content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent);
+}
+.gtab .n{font-family:var(--font-serif);font-size:11px;font-weight:400;opacity:.5;margin-left:5px;}
+/* 第二行：子类 + 搜索 + 排序 */
+.filterline{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:11px 0;}
+.gtab.favtab{margin-left:auto;}
+/* 收藏按钮：放在每条右下角，和「原文」并排 */
+.star{
+  font:inherit;font-size:11.5px;background:none;border:0;padding:0;cursor:pointer;
+  color:var(--ink-3);letter-spacing:.03em;transition:color .12s;
+}
+.star:hover{color:var(--ink);}
+.star[aria-pressed="true"]{color:var(--accent);}
+.chips{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{
+  font:inherit;font-size:12px;color:var(--ink-2);background:transparent;
+  border:1px solid var(--line-2);border-radius:var(--r);
+  padding:5px 11px;cursor:pointer;line-height:1;letter-spacing:.01em;
+  transition:background .14s,color .14s,border-color .14s;
+}
+.chip:hover{border-color:var(--ink-3);color:var(--ink);}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper-2);}
+.chip .n{opacity:.45;margin-left:4px;font-size:11px;}
+.search{flex:1;min-width:180px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line-2);padding:4px 2px;}
+.search svg{flex:none;opacity:.4;}
+.search input{
+  flex:1;border:0;background:transparent;font:inherit;font-size:12.5px;color:var(--ink);
+  padding:2px 0;outline:none;
+}
+.search input::placeholder{color:var(--ink-3);}
+.sortbtn{
+  font:inherit;font-size:11.5px;color:var(--ink-2);background:transparent;border:0;
+  padding:5px 8px;cursor:pointer;letter-spacing:.02em;border-bottom:1px dashed var(--line-2);
+}
+.sortbtn:hover{color:var(--ink);}
+
+/* ---------- 主体 ---------- */
+.layout{display:grid;grid-template-columns:1fr 296px;gap:44px;padding:6px 0 60px;}
+.feed{list-style:none;margin:0;padding:0;}
+.item{
+  display:grid;grid-template-columns:78px 1fr;gap:20px;
+  padding:20px 0 19px;border-bottom:1px solid var(--line);
+  transition:background .16s;
+}
+.item:hover{background:var(--paper-2);}
+.days{border-right:1px solid var(--line);padding-right:16px;text-align:right;}
+.days b{display:block;font-family:var(--font-serif);font-size:31px;font-weight:400;line-height:1;letter-spacing:-.02em;}
+.days span{display:block;font-size:10px;letter-spacing:.08em;color:var(--ink-3);margin-top:5px;}
+.days.hot b{color:var(--accent);}
+.days.warm b{color:var(--amber);}
+.days.cool b{color:var(--green);}
+.days.past b{color:var(--ink-3);font-size:22px;}
+.days.col .days span{color:var(--accent);}
+
+.body{min-width:0;}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.tag{
+  font-size:10.5px;letter-spacing:.04em;line-height:1;padding:3px 7px;
+  border:1px solid var(--line-2);border-radius:var(--r);color:var(--ink-2);
+}
+.tag.cat{background:var(--paper-2);color:var(--ink);border-color:var(--line-2);font-weight:600;}
+.tag.pin{color:var(--accent);border-color:#E0B9B2;background:var(--accent-bg);}
+.item h2{
+  margin:0 0 6px;font-size:16.5px;font-weight:650;line-height:1.45;letter-spacing:-.005em;
+}
+.item h2 a:hover{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;}
+.desc{margin:0 0 10px;font-size:12.5px;color:var(--ink-2);line-height:1.65;max-width:62ch;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.foot{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--ink-3);letter-spacing:.02em;}
+.foot .dl{color:var(--ink-2);}
+.foot .dl b{font-family:var(--font-serif);font-weight:400;font-size:12.5px;}
+.src::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--line-2);margin-right:6px;transform:translateY(-1px);}
+.foot a{margin-left:auto;color:var(--ink-2);border-bottom:1px solid var(--line-2);padding-bottom:1px;}
+.foot a:hover{color:var(--accent);border-color:var(--accent);}
+
+/* ---------- 右栏 ---------- */
+.rail{position:relative;}
+.rail section{margin-bottom:30px;}
+.rail h3{
+  margin:0 0 12px;font-size:10.5px;font-weight:700;letter-spacing:.14em;
+  color:var(--ink-3);text-transform:uppercase;
+}
+.rail .rule{height:1px;background:var(--line);margin:0 0 12px;}
+.soon{list-style:none;margin:0;padding:0;}
+.soon li{display:flex;gap:10px;padding:9px 0;border-bottom:1px dotted var(--line);font-size:12.5px;line-height:1.45;}
+.soon li:last-child{border-bottom:0;}
+.soon b{font-family:var(--font-serif);font-weight:400;font-size:15px;color:var(--accent);flex:none;width:26px;}
+.soon span{color:var(--ink-2);}
+
+.health{list-style:none;margin:0;padding:0;font-size:12px;}
+.health li{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px dotted var(--line);}
+.health li:last-child{border-bottom:0;}
+.dot{width:7px;height:7px;border-radius:50%;flex:none;}
+.dot.ok{background:var(--green);}
+.dot.warn{background:var(--amber);}
+.dot.off{background:var(--line-2);}
+.health .nm{flex:1;color:var(--ink-2);}
+.health .st{font-size:10.5px;color:var(--ink-3);letter-spacing:.04em;}
+
+.note{
+  background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);
+  padding:13px 14px;font-size:11.5px;line-height:1.7;color:var(--ink-2);
+}
+.note b{color:var(--ink);font-weight:650;}
+.note code{
+  font-family:ui-monospace,Consolas,monospace;font-size:10.5px;
+  background:#EDE7DC;padding:1px 4px;border-radius:2px;
+}
+
+/* ---------- 空状态 ---------- */
+.empty{display:none;padding:60px 0;text-align:center;color:var(--ink-3);font-size:13px;}
+.empty b{display:block;font-family:var(--font-serif);font-size:22px;color:var(--ink-2);font-weight:400;margin-bottom:6px;}
+
+/* ---------- 页脚 ---------- */
+footer{border-top:1px solid var(--line-2);padding:18px 0 40px;font-size:11px;color:var(--ink-3);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;letter-spacing:.02em;}
+footer a{border-bottom:1px solid var(--line-2);}
+
+@media (max-width:900px){
+  .layout{grid-template-columns:1fr;gap:0;}
+  .rail{margin-top:34px;border-top:1px solid var(--line-2);padding-top:26px;}
+  .rail{display:grid;grid-template-columns:1fr 1fr;gap:0 28px;}
+}
+@media (max-width:620px){
+  .wrap{padding:0 18px;}
+  h1{font-size:22px;}
+  .headright{gap:18px;width:100%;justify-content:flex-start;}
+  .item{grid-template-columns:56px 1fr;gap:14px;}
+  .days{padding-right:10px;}
+  .days b{font-size:24px;}
+  .desc{-webkit-line-clamp:3;}
+  .rail{grid-template-columns:1fr;}
+  .foot a{margin-left:0;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important;}
+}
+</style>
+</head>
+<body>
+
+<div class="demo"><b>真实数据</b> · 每天定时抓 4 个来源：教务处 / 学生处 / 电信学部本科教学 / 南洋书院 · <span id="s-bar">—</span></div>
+
+<div class="wrap">
+  <header>
+    <div class="masthead">
+      <div>
+        <div class="brand"><i class="mark"></i><h1>信息差</h1></div>
+        <div class="sub">西安交通大学 · 本科生通知聚合　<em>只放标题与链接，每天 08:00 自动更新</em></div>
+      </div>
+      <div class="headright">
+        <div class="stat"><b id="s-new">—</b><span>今日新通知</span></div>
+        <div class="stat"><b id="s-week">—</b><span>本周截止</span></div>
+        <div class="stat"><b id="s-date">—</b><span>数据截至</span></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="groupline">
+      <span class="glabel">大类</span>
+      <div class="groups" id="groups"></div>
+    </div>
+    <div class="filterline">
+      <div class="chips" id="chips"></div>
+      <label class="search">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></svg>
+        <input id="q" type="search" placeholder="搜标题、关键词，比如「转专业」「四六级」" aria-label="搜索通知">
+      </label>
+      <button class="sortbtn" id="sort">按截止日期排序 ↓</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <main>
+      <ol class="feed" id="feed"></ol>
+
+      <div class="empty" id="empty"><b>没有匹配的通知</b>换个关键词试试，或点「全部」</div>
+    </main>
+
+    <aside class="rail">
+      <section>
+        <h3>最近截止</h3>
+        <ul class="soon" id="soon"></ul>
+      </section>
+
+      <section>
+        <h3>抓取状态</h3>
+        <ul class="health" id="health"></ul>
+      </section>
+
+      <section>
+        <h3>这版是什么</h3>
+        <div class="note">这版<b>不再是假数据</b>：每天定时抓 4 个来源（教务处 / 学生处 / 电信学部本科教学 / 南洋书院），按截止日期排，筛掉跟你无关的。<br><br>4 个来源里<b>现在只有教务处在产出</b>：学生处发的是给「各单位」和毕业生的；电信学部本科教学网 2025-06 之后没更新；南洋书院官网 2025-03 之后没更新。右边「抓取状态」就是把这件事摆出来——<b>一个来源是空的，本身就是信息</b>。<br><br>大部分本科通知其实走公众号和班级群，那些爬不到，只能靠人。<br><br>页面按<b>大类 → 子类</b>两级筛。现在只有一个大类「学校通知」，下面再分 教务 / 奖助 / 竞赛…；以后要加「实习机会」「学习资料」这种新大类，数据里带上 group 字段就行，标签会自己长出来。<br><br>点每条右下角的 <b>☆ 收藏</b>存下来，顶层「我的收藏」里看。存在你这台电脑的浏览器里，换设备不同步。<br><br>有几条通知正文里确实没写截止日期，排在最后标「无截止」——<b>宁可空着，也不编一个日期</b>。<br><br>排序按<b>截止日期</b>，不按发布时间，这是它和普通通知列表的区别。</div>
+      </section>
+    </aside>
+  </div>
+
+  <footer>
+    <span>信息差 · 校园信息聚合原型</span>
+    <span>仅聚合标题、摘要与原文链接 · 每日 08:00 更新 · <a href="#">数据来源说明</a></span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var feed=document.getElementById('feed'), empty=document.getElementById('empty'),
+      chips=document.getElementById('chips'), groupsEl=document.getElementById('groups'), q=document.getElementById('q'),
+      sortBtn=document.getElementById('sort'), soonEl=document.getElementById('soon'),
+      healthEl=document.getElementById('health'),
+      sNew=document.getElementById('s-new'), sWeek=document.getElementById('s-week'),
+      sDate=document.getElementById('s-date');
+  var grp='all', cat='all', asc=true, items=[], list0=[];
+
+  function esc(v){
+    return String(v==null?'':v).replace(/[&<>"]/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+    });
+  }
+  function cls(d){
+    if(d===null||d===undefined) return 'past';
+    if(d<0) return 'past';
+    if(d<=7) return 'hot';
+    if(d<=14) return 'warm';
+    return 'cool';
+  }
+  function shrink(t,n){
+    t=String(t||'');
+    return t.length>n ? t.slice(0,n)+'…' : t;
+  }
+
+  // ---------- 收藏：存在浏览器本地，不上传、不需要登录 ----------
+  var FAV_KEY='xjtu.favs.v1';
+  var FAVS=(function(){
+    try{ return JSON.parse(localStorage.getItem(FAV_KEY)||'{}'); }catch(e){ return {}; }
+  })();
+  function saveFavs(){ try{ localStorage.setItem(FAV_KEY, JSON.stringify(FAVS)); }catch(e){} }
+  function isFav(id){ return !!(id && FAVS[id]); }
+  function daysLeft(dl){
+    if(!dl) return null;
+    var d=new Date(dl+'T00:00:00');
+    if(isNaN(d)) return null;
+    var t=new Date(); t.setHours(0,0,0,0);
+    return Math.round((d-t)/86400000);
+  }
+  // 存的是整条快照，不是只存 id——这样通知从列表里滚下去、或者标题改了，收藏里还在
+  function snapshot(it){
+    return {id:it.id, title:it.title, url:it.url, summary:it.summary||'',
+            deadline:it.deadline||null, source:it.source||'',
+            category:it.category||'其他', group:it.group||'学校通知',
+            audience:it.audience||[], saved_at:new Date().toISOString()};
+  }
+  function favArray(){
+    return Object.keys(FAVS).map(function(k){
+      var f=FAVS[k], it={};
+      for(var p in f){ if(Object.prototype.hasOwnProperty.call(f,p)) it[p]=f[p]; }
+      it.days_left=daysLeft(it.deadline);   // 收藏当天的天数不算数，要看今天
+      return it;
+    });
+  }
+
+  function renderItem(it){
+    var d=(it.days_left===undefined? null : it.days_left);
+    var num=(d===null)? '—' : (d<0 ? Math.abs(d) : d);
+    var lab=(d===null)? '无截止' : (d<0 ? '天前已过' : (d===0 ? '今天截止' : '天后截止'));
+    var aud=(it.audience&&it.audience.length)? it.audience.join(' · ') : '不限年级';
+    var tags='<span class="tag cat">'+esc(it.category||'其他')+'</span>'
+            +'<span class="tag">'+esc(aud)+'</span>';
+    if(d!==null && d>=0 && d<=3) tags+='<span class="tag pin">最容易错过</span>';
+    var dl=it.deadline ? ('截止 <b>'+esc(it.deadline.slice(5))+'</b>') : '正文未写截止日期';
+
+    var li=document.createElement('li');
+    li.className='item';
+    li.dataset.cat=it.category||'其他';
+    li.dataset.group=it.group||'学校通知';
+    li.dataset.id=it.id||'';
+    li.dataset.days=(d===null? 9999 : d);
+    li.dataset.title=it.title;
+    li.innerHTML=
+      '<div class="days '+cls(d)+'"><b>'+num+'</b><span>'+lab+'</span></div>'
+      +'<div class="body">'
+      +  '<div class="tags">'+tags+'</div>'
+      +  '<h2><a href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.title)+'</a></h2>'
+      +  (it.summary ? '<p class="desc">'+esc(it.summary)+'</p>' : '')
+      +  '<div class="foot"><span class="dl">'+dl+'</span>'
+      +  '<span class="src">'+esc(it.source||'')+'</span>'
+      +  '<button class="star" data-id="'+esc(it.id)+'" aria-pressed="'+(isFav(it.id)?'true':'false')+'">'
+      +    (isFav(it.id)?'★ 已收藏':'☆ 收藏')+'</button>'
+      +  '<a href="'+esc(it.url)+'" target="_blank" rel="noopener">原文 ↗</a></div>'
+      +'</div>';
+    return li;
+  }
+
+  function sortItems(){
+    items.sort(function(a,b){
+      var d=Number(a.dataset.days)-Number(b.dataset.days);
+      return asc ? d : -d;
+    });
+    items.forEach(function(el){ feed.appendChild(el); });
+    sortBtn.textContent = asc ? '按截止日期排序 ↑' : '按截止日期排序 ↓';
+  }
+
+  function refresh(){
+    var kw=q.value.trim().toLowerCase(), shown=0;
+    items.forEach(function(el){
+      var ok=(grp==='all'||grp==='fav'||el.dataset.group===grp)
+          && (cat==='all'||el.dataset.cat===cat)
+          && (!kw || el.textContent.toLowerCase().indexOf(kw)>-1);
+      el.style.display=ok?'':'none';
+      if(ok) shown++;
+    });
+    empty.style.display = shown ? 'none' : 'block';
+  }
+
+  // 把当前该显示的那批数据整个重画一遍（切大类、加/删收藏都要重画）
+  function paint(){
+    var arr=(grp==='fav') ? favArray() : list0;
+    feed.innerHTML='';
+    arr.forEach(function(it){ feed.appendChild(renderItem(it)); });
+    items=Array.prototype.slice.call(feed.querySelectorAll('.item'));
+    sortItems(); refresh();
+    if(grp==='fav' && !arr.length){
+      empty.style.display='block';
+      empty.innerHTML='<b>还没有收藏</b>在通知右下角点「☆ 收藏」，收藏的都会出现在这里。';
+    }else{
+      empty.innerHTML='<b>没有匹配的通知</b>换个关键词试试，或点「全部」';
+    }
+  }
+
+  // 大类标签：按数据里真实出现过的 group 生成，加新大类不用改这里
+  function renderGroups(list){
+    var map={};
+    list.forEach(function(x){ var g=x.group||'学校通知'; map[g]=(map[g]||0)+1; });
+    var names=Object.keys(map), html='';
+    html+='<button class="gtab" aria-pressed="'+(grp==='all')+'" data-group="all">全部<span class="n">'+list.length+'</span></button>';
+    names.forEach(function(g){
+      html+='<button class="gtab" aria-pressed="'+(grp===g)+'" data-group="'+esc(g)+'">'+esc(g)+'<span class="n">'+map[g]+'</span></button>';
+    });
+    html+='<button class="gtab favtab" aria-pressed="'+(grp==='fav')+'" data-group="fav">我的收藏<span class="n">'+Object.keys(FAVS).length+'</span></button>';
+    groupsEl.innerHTML=html;
+  }
+
+  // 子类标签：只列当前大类下真实出现的 category，不列空的
+  function renderChips(list){
+    var ORDER=['教务','奖助','竞赛','科研','就业','讲座'];
+    var inGroup=list.filter(function(x){ return grp==='all' || grp==='fav' || (x.group||'学校通知')===grp; });
+    var map={};
+    inGroup.forEach(function(x){ var c=x.category||'其他'; map[c]=(map[c]||0)+1; });
+    var names=Object.keys(map).sort(function(a,b){
+      var ia=ORDER.indexOf(a), ib=ORDER.indexOf(b);
+      if(ia<0) ia=99; if(ib<0) ib=99;
+      return ia-ib;
+    });
+    var html='<button class="chip" aria-pressed="'+(cat==='all')+'" data-cat="all">全部<span class="n">'+inGroup.length+'</span></button>';
+    names.forEach(function(c){
+      html+='<button class="chip" aria-pressed="'+(cat===c)+'" data-cat="'+esc(c)+'">'+esc(c)+'<span class="n">'+map[c]+'</span></button>';
+    });
+    chips.innerHTML=html;
+  }
+
+  function renderSoon(list){
+    var arr=list.filter(function(x){return !!x.deadline;})
+                .sort(function(a,b){return a.days_left-b.days_left;})
+                .slice(0,4);
+    soonEl.innerHTML = arr.map(function(x){
+      return '<li><b>'+x.days_left+'</b><span>'+esc(shrink(x.title,14))+'</span></li>';
+    }).join('') || '<li><span style="color:#8A8278">暂无带截止日期的通知</span></li>';
+  }
+
+  function renderHealth(sources){
+    var html=(sources||[]).map(function(s){
+      return '<li><i class="dot '+(s.out>0?'ok':'off')+'"></i><span class="nm">'+esc(s.name)+'</span>'
+            +'<span class="st">抓 '+s.in+' · 入选 '+s.out+'</span></li>';
+    }).join('');
+    ['资助中心','就业中心','图书馆','兵马俑BBS'].forEach(function(k){
+      html+='<li><i class="dot off"></i><span class="nm">'+esc(k)+'</span>'
+           +'<span class="st">未接入</span></li>';
+    });
+    healthEl.innerHTML=html;
+  }
+
+  groupsEl.addEventListener('click',function(e){
+    var b=e.target.closest('.gtab');
+    if(!b) return;
+    grp=b.dataset.group;
+    cat='all';                       // 换大类时，子类选择清零
+    Array.prototype.forEach.call(groupsEl.children,function(c){
+      c.setAttribute('aria-pressed', c===b?'true':'false');
+    });
+    renderChips(grp==='fav'? favArray() : list0);   // 子类标签跟着新大类重新长
+    paint();
+  });
+
+  // 收藏按钮：事件委托，因为列表会整个重画
+  feed.addEventListener('click',function(e){
+    var b=e.target.closest('.star');
+    if(!b) return;
+    e.preventDefault();
+    var id=b.dataset.id, nowFav=false;
+    if(id && FAVS[id]){
+      delete FAVS[id];
+    }else{
+      var src=null;
+      list0.some(function(x){ if(x.id===id){ src=x; return true; } return false; });
+      if(!src){ favArray().some(function(x){ if(x.id===id){ src=x; return true; } return false; }); }
+      if(src){ FAVS[id]=snapshot(src); nowFav=true; }
+    }
+    saveFavs();
+    var tab=groupsEl.querySelector('[data-group="fav"] .n');
+    if(tab) tab.textContent=Object.keys(FAVS).length;
+    if(grp==='fav'){
+      paint();                        // 停在收藏页时取消收藏，这条要当场消失
+    }else{
+      b.setAttribute('aria-pressed', nowFav?'true':'false');
+      b.textContent = nowFav ? '★ 已收藏' : '☆ 收藏';
+    }
+  });
+  chips.addEventListener('click',function(e){
+    var b=e.target.closest('.chip');
+    if(!b) return;
+    cat=b.dataset.cat;
+    Array.prototype.forEach.call(chips.children,function(c){
+      c.setAttribute('aria-pressed', c===b?'true':'false');
+    });
+    refresh();
+  });
+  q.addEventListener('input',refresh);
+  sortBtn.addEventListener('click',function(){
+    asc=!asc; sortItems();
+  });
+
+  fetch('feed.json',{cache:'no-store'})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(data){
+      // 只把「头条 / 列表」画出来；「归档」留在 feed.json 里备查，不参与刷屏
+      var list=(data.items||[]).filter(function(x){
+        return x.bucket==='头条' || x.bucket==='列表';
+      });
+      list0=list;
+      renderGroups(list0); renderChips(list0); renderSoon(list0); renderHealth((data.stats&&data.stats.sources)||[]);
+      sNew.textContent=list.length;
+      sWeek.textContent=list.filter(function(x){
+        return x.days_left!==null && x.days_left>=0 && x.days_left<=7;
+      }).length;
+      sDate.textContent=((data.stats&&data.stats.today)||data.today||'').slice(5) || '—';
+      var sBar=document.getElementById('s-bar');
+      if(sBar) sBar.textContent=((data.stats&&data.stats.today)||data.today||'');
+      paint();
+    })
+    .catch(function(err){
+      var box=document.createElement('div');
+      box.style.cssText='margin:12px 0;padding:11px 13px;border:1px solid #E0B9B2;background:#FBF1EF;'
+                      +'color:#A9362B;font-size:12.5px;line-height:1.6;border-radius:2px';
+      box.innerHTML='<b>没读到 feed.json（'+esc(err.message)+'）</b><br>'
+        +'如果你是把 index.html 直接双击打开的，浏览器会禁止本地 fetch。'
+        +'先在这个文件夹里运行 <code>python -m http.server 8777</code>，'
+        +'再访问 <code>http://127.0.0.1:8777/</code>。';
+      document.querySelector('.layout').parentNode.insertBefore(
+        box, document.querySelector('.layout'));
+      empty.style.display='block';
+      empty.innerHTML='<b>数据没加载出来</b>见上面那行提示';
+    });
+})();
+</script>
+</body>
+</html>
