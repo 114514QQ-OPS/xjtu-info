@@ -64,12 +64,17 @@ SOURCE_WEIGHT = {
     "图书馆": 1,
     "书院": 1,
     "华为招聘": 2,
+    "小米招聘": 2,
+    "比亚迪招聘": 2,
+    "中兴通讯招聘": 2,
+    "大疆招聘": 2,
+    "宁德时代招聘": 2,
     "其他": 1,
 }
 
 GRADE_ORDER = {"大一": 1, "大二": 2, "大三": 3, "大四": 4, "研究生": 5}
 
-CATEGORIES = ["教务", "奖助", "竞赛", "科研", "就业", "讲座", "生活", "招聘", "华为",
+CATEGORIES = ["教务", "奖助", "竞赛", "科研", "就业", "讲座", "生活", "招聘", "华为", "小米", "比亚迪", "中兴通讯", "大疆", "宁德时代",
               "彭康书院", "宗濂书院", "启德书院", "崇实书院", "南洋书院", "其他"]
 
 # 招聘类（企业岗位）走一套不同的规则：
@@ -80,7 +85,7 @@ CATEGORIES = ["教务", "奖助", "竞赛", "科研", "就业", "讲座", "生�
 # 「就业」大类下面的子类是**公司**：华为、以后的中兴/字节…
 # JOB_FIRMS 里列的公司，即使这次抓到 0 个岗位，页面标签也会显示出来，
 # 让你看得见"这个源我接了，只是它现在空着"。
-JOB_FIRMS = ["华为"]
+JOB_FIRMS = ["华为", "小米", "比亚迪", "中兴通讯", "大疆", "宁德时代"]
 JOB_CATS = {"招聘"} | set(JOB_FIRMS)
 
 # 书院：通知是给"住在这个书院的本科生"的（宿舍、评优、学代会、志愿活动），
@@ -306,6 +311,12 @@ def decide(item: dict, grade: str, today: date) -> dict:
     if s["bucket"] == "归档" and item.get("category") in BOOK_HOUSE_CATS and not dl_date:
         s["bucket"] = "列表"
         s["reason"] = f"{s['score']}/12 分，书院通知无截止日期，保留在列表"
+
+    # 企业岗位同理：小米、比亚迪的接口里根本没有截止日期字段，只有发布时间。
+    # 没有截止日期不代表这个岗位没了，不该因为「不够紧急」沉到归档里。
+    if s["bucket"] == "归档" and item.get("category") in JOB_CATS and not dl_date:
+        s["bucket"] = "列表"
+        s["reason"] = f"{s['score']}/12 分，岗位无公开截止日期，保留在列表"
     return s
 
 
@@ -324,7 +335,7 @@ def decide(item: dict, grade: str, today: date) -> dict:
 #   ② 在这里的 GROUP_BY_CATEGORY 加一行映射（比如 {"实习": "实习机会"}）
 # 前端不用改——标签页是按数据里出现过哪些 group 自动长出来的。
 GROUP_DEFAULT = "学校通知"
-GROUP_BY_CATEGORY: dict[str, str] = {"招聘": "就业", "华为": "就业"}
+GROUP_BY_CATEGORY: dict[str, str] = {"招聘": "就业", "华为": "就业", "小米": "就业", "比亚迪": "就业", "中兴通讯": "就业", "大疆": "就业", "宁德时代": "就业"}
 
 
 def process(raw: list, grade: str = "大一", today: date | None = None, input_path=None) -> dict:
@@ -355,14 +366,18 @@ def process(raw: list, grade: str = "大一", today: date | None = None, input_p
         survivors.append(it)
 
     # --- 去重（保留发布时间最新的那条）---
+    # 注意：招聘类**不做标题相似度去重**。同一家公司常有「工艺工程师（深圳）」
+    # 「工艺工程师（西安）」这种只差城市、甚至只差一个序号的两个岗位，
+    # 按标题相似度一合并，20 个岗位只剩 1 个。它们只按 URL 去重。
     survivors.sort(key=lambda x: str(x.get("published_at") or ""), reverse=True)
     kept = []
     for it in survivors:
+        is_job = it.get("category") in JOB_CATS
         dup = None
         for k in kept:
-            same_url = norm_url(it["url"]) == norm_url(k["url"])
+            same_url = (it["url"] == k["url"]) if is_job else (norm_url(it["url"]) == norm_url(k["url"]))
             sim = title_sim(it.get("title", ""), k.get("title", ""))
-            if same_url or sim >= DEDUP_THRESHOLD:
+            if same_url or (not is_job and sim >= DEDUP_THRESHOLD):
                 dup = (k, sim, same_url)
                 break
         if dup:
@@ -533,3 +548,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
