@@ -144,6 +144,11 @@ h1{margin:0;font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1;}
 .item h2 a:hover{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;}
 .desc{margin:0 0 10px;font-size:12.5px;color:var(--ink-2);line-height:1.65;max-width:62ch;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+/* 岗位的「薪资 / 要求」：比摘要再小一号，跟在摘要下面 */
+.kv{display:flex;gap:10px;margin:0 0 8px;font-size:12px;line-height:1.6;max-width:62ch;}
+.kv .k{flex:0 0 auto;color:var(--ink-3);letter-spacing:.1em;}
+.kv .v{color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.kv .v.sal{color:var(--accent);font-weight:600;font-family:var(--font-serif);font-size:13px;letter-spacing:.02em;}
 .foot{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--ink-3);letter-spacing:.02em;}
 .foot .dl{color:var(--ink-2);}
 .foot .dl b{font-family:var(--font-serif);font-weight:400;font-size:12.5px;}
@@ -273,7 +278,7 @@ footer a{border-bottom:1px solid var(--line-2);}
 
       <section>
         <h3>这版是什么</h3>
-        <div class="note">这版<b>不再是假数据</b>：每天定时抓 <b>13 个来源</b>——学校这边是教务处 / 学生处 / 电信学部本科教学 / 四个书院（南洋·彭康·宗濂·启德）；就业那边是 <b>华为 / 小米 / 比亚迪 / 中兴 / 大疆 / 宁德时代</b> 六家企业的校招官网。按截止日期排，筛掉跟你无关的。<br><br>学校这边<b>仍然只有教务处在稳定产出</b>：学生处发的是给「各单位」和毕业生的；电信学部本科教学网 2025-06 后没更新；南洋书院官网 2025-03 后没更新；<b>彭康书院还在更新</b>，宗濂偶尔发。崇实书院的通知页是导航页、找不到列表；文治/仲英/励志/钱学森的域名解析不到。右边「抓取状态」就是把这件事摆出来——<b>一个来源是空的，本身就是信息</b>。<br><br>「就业」这一栏现在 100 条左右岗位，来自 6 家公司的公开接口（华为 11 月中秋招已收尾，暂时 0 条）。每家公司是一个子类；每条岗位再打一个<b>方向</b>标签（芯片 / 算法 / 嵌入式 / 硬件 / 测试 / 软件 / 产品），就业页面上那一排「方向」就是用来筛这个的。<br><br>接一家新公司等于写一套新解析——每家的接口都不一样，小米、比亚迪各花了半小时，中兴/大疆/宁德都用同一家招聘云（Moka），所以共用一个模块、返回体还是加密的。接进来以后标签会自己长，页面不用改。<br><br>大部分本科通知其实走公众号和班级群，那些爬不到，只能靠人。<br><br>点每条右下角的 <b>☆ 收藏</b>存下来，顶层「我的收藏」里看。存在你这台电脑的浏览器里，换设备不同步。<br><br>有几条通知正文里确实没写截止日期，排在最后标「无截止」——<b>宁可空着，也不编一个日期</b>。排序按<b>截止日期</b>，不按发布时间，这是它和普通通知列表的区别。</div>
+        <div class="note">这版<b>不再是假数据</b>：每天定时抓 <b>13 个来源</b>——学校这边是教务处 / 学生处 / 电信学部本科教学 / 四个书院（南洋·彭康·宗濂·启德）；就业那边是 <b>华为 / 小米 / 比亚迪 / 中兴 / 大疆 / 宁德时代</b> 六家企业的校招官网。按截止日期排，筛掉跟你无关的。<br><br>学校这边<b>仍然只有教务处在稳定产出</b>：学生处发的是给「各单位」和毕业生的；电信学部本科教学网 2025-06 后没更新；南洋书院官网 2025-03 后没更新；<b>彭康书院还在更新</b>，宗濂偶尔发。崇实书院的通知页是导航页、找不到列表；文治/仲英/励志/钱学森的域名解析不到。右边「抓取状态」就是把这件事摆出来——<b>一个来源是空的，本身就是信息</b>。<br><br>「就业」这一栏现在 100 条左右岗位，来自 6 家公司的公开接口（华为 11 月中秋招已收尾，暂时 0 条）。每家公司是一个子类；每条岗位再打一个<b>方向</b>标签（芯片 / 算法 / 嵌入式 / 硬件 / 测试 / 软件 / 产品），就业页面上那一排「方向」就是用来筛这个的。<br><br>接一家新公司等于写一套新解析——每家的接口都不一样，小米、比亚迪各花了半小时，中兴/大疆/宁德都用同一家招聘云（Moka），所以共用一个模块、返回体还是加密的。接进来以后标签会自己长，页面不用改。<br><br>每条岗位下面多两行：<b>要求</b>是从 JD 里原样抽出来的一段（100 条里抽到 59 条；中兴的接口只给标题和地点、比亚迪连 JD 都不给，所以那两家是空的）。<b>薪资</b>——这 100 条里 <b>0 条公开</b>，校招 JD 基本不写薪水，所以我没编。同理，<b>面试是线上还是线下</b> JD 里也没有这个字段，硬标就是假数据。<br><br>大部分本科通知其实走公众号和班级群，那些爬不到，只能靠人。<br><br>点每条右下角的 <b>☆ 收藏</b>存下来，顶层「我的收藏」里看。存在你这台电脑的浏览器里，换设备不同步。<br><br>有几条通知正文里确实没写截止日期，排在最后标「无截止」——<b>宁可空着，也不编一个日期</b>。排序按<b>截止日期</b>，不按发布时间，这是它和普通通知列表的区别。</div>
       </section>
     </aside>
   </div>
@@ -329,6 +334,7 @@ footer a{border-bottom:1px solid var(--line-2);}
   // 存的是整条快照，不是只存 id——这样通知从列表里滚下去、或者标题改了，收藏里还在
   function snapshot(it){
     return {id:it.id, title:it.title, url:it.url, summary:it.summary||'',
+            salary:it.salary||'', require:it.require||'', jobcat:it.jobcat||'',
             deadline:it.deadline||null, source:it.source||'',
             category:it.category||'其他', group:it.group||'学校通知',
             audience:it.audience||[], saved_at:new Date().toISOString()};
@@ -369,6 +375,8 @@ footer a{border-bottom:1px solid var(--line-2);}
       +  '<div class="tags">'+tags+'</div>'
       +  '<h2><a href="'+esc(it.url)+'" target="_blank" rel="noopener">'+esc(it.title)+'</a></h2>'
       +  (it.summary ? '<p class="desc">'+esc(it.summary)+'</p>' : '')
+      +  (it.salary ? '<div class="kv"><span class="k">薪资</span><span class="v sal">'+esc(it.salary)+'</span></div>' : '')
+      +  (it.require ? '<div class="kv"><span class="k">要求</span><span class="v">'+esc(it.require)+'</span></div>' : '')
       +  '<div class="foot"><span class="dl">'+dl+'</span>'
       +  '<span class="src">'+esc(it.source||'')+'</span>'
       +  '<button class="star" data-id="'+esc(it.id)+'" aria-pressed="'+(isFav(it.id)?'true':'false')+'">'
