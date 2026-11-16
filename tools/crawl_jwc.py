@@ -499,6 +499,44 @@ def guess_job_cat(title: str, fam: str = "") -> str:
     return "其他"
 
 
+# ---- 岗位的「要求」和「薪资」：能从正文里捞就捞，捞不到就空着 ----
+
+REQ_HEAD = re.compile(r"(任职要求|岗位要求|职位要求|应聘要求|任职资格|我们需要你|我们希望|你会参与|要求如下)")
+REQ_HINT = re.compile(r"(本科|硕士|博士|研究生|专业|熟悉|掌握|具备|年以上|应届)")
+SALARY_RE = re.compile(
+    r"(\d{1,3}(?:\.\d)?\s*[-~至到]\s*\d{1,3}(?:\.\d)?\s*(?:[kK]|千|万|元)"
+    r"|年薪\s*\d{1,3}(?:\.\d)?\s*万?"
+    r"|月薪\s*\d{1,3}(?:\.\d)?\s*[kK千元]"
+    r"|\d{1,3}(?:\.\d)?\s*万\s*[-~至]\s*\d{1,3}(?:\.\d)?\s*万"
+    r"|\d{1,3}\s*元\s*/\s*天)"
+)
+
+
+def pick_requirement(text: str, limit: int = 80) -> str | None:
+    """从岗位正文里挑出一句『要求』。有『任职要求』这种小标题就用它后面的；
+    没有就退一步，找第一句提到学历/专业的。都找不到返回 None。"""
+    t = re.sub(r"\s+", " ", text or "").strip()
+    if not t:
+        return None
+    m = REQ_HEAD.search(t)
+    if m:
+        tail = t[m.end():].lstrip("：: ，,。.")
+        if len(tail) >= 8:
+            return tail[:limit].rstrip("，,；;、") + ("…" if len(tail) > limit else "")
+    for seg in re.split(r"(?<=[。；;])", t):
+        seg = seg.strip(" 　")
+        if 8 <= len(seg) <= 120 and REQ_HINT.search(seg):
+            return seg[:limit].rstrip("，,；;、") + ("…" if len(seg) > limit else "")
+    return None
+
+
+def pick_salary(text: str) -> str | None:
+    """捞薪资区间。校招 JD 大多不写，捞不到就 None（不猜）。"""
+    m = SALARY_RE.search(re.sub(r"\s+", " ", text or ""))
+    return m.group(1).strip() if m else None
+
+
+
 def huawei_item(j: dict, jt: str) -> dict:
     """把华为接口返回的一条职位，翻译成我们自己的条目格式。"""
     jid = j.get("jobId")
@@ -523,6 +561,8 @@ def huawei_item(j: dict, jt: str) -> dict:
         "deadline": (j.get("expirationDate") or "")[:10] or None,
         "summary": summary or None,
         "body_text": (biz + " " + req)[:2000],
+        "require": pick_requirement(req) or pick_requirement(biz),
+        "salary": pick_salary(biz + " " + req),
         "audience": ["不限"],
         # 就业大类下面一层是「公司」，所以 category 直接放公司名
         "category": "华为",
@@ -591,6 +631,8 @@ def xiaomi_item(j: dict) -> dict:
         "deadline": None,
         "summary": summary or None,
         "body_text": (desc + " " + req)[:2000],
+        "require": pick_requirement(req) or pick_requirement(desc),
+        "salary": pick_salary(desc + " " + req),
         "audience": ["不限"],
         # 就业大类下面一层是「公司」，category 直接放公司名
         "category": "小米",
@@ -671,6 +713,9 @@ def byd_item(j: dict) -> dict:
         "deadline": None,          # 比亚迪不公开截止日期，宁可空着
         "summary": (head + "。比亚迪 2027 届校园招聘") if head else "比亚迪 2027 届校园招聘",
         "body_text": head,
+        # 比亚迪列表接口只有岗位名/地点/类型，连 JD 都不给，这两项只能空着
+        "require": None,
+        "salary": None,
         "audience": ["不限"],
         "category": "比亚迪",
         "category_raw": "比亚迪",
@@ -725,7 +770,8 @@ def moka_item(j: dict, firm: str) -> dict:
             locs.append(nm)
     city = "·".join(locs[:3])
     zn = ((j.get("zhineng") or {}).get("name") or "").strip()
-    desc = to_text(j.get("jobDescription") or "")[:300]
+    full = to_text(j.get("jobDescription") or "")
+    desc = full[:300]
 
     # 岗位本身没有截止日期，但所属招聘项目可能有（比如「应届生招聘」到 2027-08-31）
     deadline = None
@@ -743,7 +789,9 @@ def moka_item(j: dict, firm: str) -> dict:
         "published_at": (j.get("publishedAt") or "")[:10] or None,
         "deadline": deadline,
         "summary": summary or None,
-        "body_text": (desc or "")[:2000],
+        "body_text": (full or "")[:2000],
+        "require": pick_requirement(full),
+        "salary": pick_salary(full),
         "audience": ["不限"],
         "category": firm,
         "category_raw": firm,
