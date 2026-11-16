@@ -389,6 +389,34 @@ HUAWEI_JOB_API = ("https://career.huawei.com/reccampportal/services/portal/"
 HUAWEI_JOB_TYPE_NAME = {"1": "应届生", "2": "实习生", "3": "留学生"}
 
 
+# 岗位方向分类：只按标题（+职位族）打标签，规则可读、可改。
+# 顺序很重要：先判芯片再判硬件（"芯片硬件工程师"归芯片），
+# 先判硬件再判测试（"硬件测试"归硬件，"软件测试"归测试）。
+JOB_CAT_RULES = [
+    ("芯片", ["芯片", "ic ", "ic设计", "soc", "数字前端", "数字后端", "dft", "验证", "封装",
+              "器件", "工艺", "版图", "eda", "模拟电路", "模拟ic", "硅"]),
+    ("算法", ["算法", "ai", "机器学习", "深度学习", "大模型", "nlp", "自然语言",
+              "计算机视觉", "cv", "数据挖掘", "推荐", "推理", "训练"]),
+    ("嵌入式", ["嵌入式", "驱动", "bsp", "固件", "单片机", "rtos", "底层软件", "操作系统"]),
+    ("硬件", ["硬件", "单板", "电路", "电源", "射频", "天线", "结构", "热设计", "pcb",
+              "电磁", "可靠性设计", "光", "互连"]),
+    ("测试", ["测试", "quality", "qa", "验证工程师", "可靠性"]),
+    ("软件", ["软件", "后端", "前端", "java", "c++", "python", "云", "分布式",
+              "大数据", "容器", "devops", "web"]),
+    ("产品", ["产品", "解决方案", "售前", "fae", "技术支持", "市场", "运营", "销售"]),
+]
+
+
+def guess_job_cat(title: str, fam: str = "") -> str:
+    """把岗位标题归到 8 个方向之一。命中不了就 '其他'。"""
+    t = ((title or "") + " " + (fam or "")).lower()
+    for name, words in JOB_CAT_RULES:
+        for w in words:
+            if w in t:
+                return name
+    return "其他"
+
+
 def huawei_item(j: dict, jt: str) -> dict:
     """把华为接口返回的一条职位，翻译成我们自己的条目格式。"""
     jid = j.get("jobId")
@@ -414,9 +442,12 @@ def huawei_item(j: dict, jt: str) -> dict:
         "summary": summary or None,
         "body_text": (biz + " " + req)[:2000],
         "audience": ["不限"],
-        "category": "招聘",
-        "category_raw": "招聘",
+        # 就业大类下面一层是「公司」，所以 category 直接放公司名
+        "category": "华为",
+        "category_raw": "华为",
         "group": "就业",
+        "firm": "华为",
+        "jobcat": guess_job_cat(title, fam),
         "source": "华为招聘",
         "source_type": "华为招聘",
         "job_type": HUAWEI_JOB_TYPE_NAME.get(jt, ""),
