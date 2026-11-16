@@ -215,7 +215,7 @@ footer a{border-bottom:1px solid var(--line-2);}
 </head>
 <body>
 
-<div class="demo"><b>真实数据</b> · 每天定时抓 5 个来源：教务处 / 学生处 / 电信学部本科教学 / 南洋书院 / 华为招聘 · <span id="s-bar">—</span></div>
+<div class="demo"><b>真实数据</b> · 每天定时抓 <span id="s-nsrc">—</span> 个来源：<span id="s-srcs">—</span> · <span id="s-bar">—</span></div>
 
 <div class="wrap">
   <header>
@@ -267,7 +267,7 @@ footer a{border-bottom:1px solid var(--line-2);}
 
       <section>
         <h3>这版是什么</h3>
-        <div class="note">这版<b>不再是假数据</b>：每天定时抓 5 个来源（教务处 / 学生处 / 电信学部本科教学 / 南洋书院 / 华为招聘），按截止日期排，筛掉跟你无关的。<br><br>4 个来源里<b>现在只有教务处在产出</b>：学生处发的是给「各单位」和毕业生的；电信学部本科教学网 2025-06 之后没更新；南洋书院官网 2025-03 之后没更新。右边「抓取状态」就是把这件事摆出来——<b>一个来源是空的，本身就是信息</b>。<br><br>华为招聘是第二个大类「就业」的第一个来源，数据走校招官网的公开接口。但现在（11 月中）<b>2027 届秋招已经收尾，开放岗位是 0</b>，所以「就业」这一栏暂时是空的。等明年 3 月春招开了，它会自己长出内容，代码不用再改。<br><br>大部分本科通知其实走公众号和班级群，那些爬不到，只能靠人。<br><br>页面按<b>大类 → 子类</b>两级筛：「学校通知」下面再分 教务 / 奖助 / 竞赛…；「就业」下面分 <b>公司</b>（现在只有华为），每条岗位还会打一个<b>岗位方向</b>标签——芯片 / 硬件 / 嵌入式 / 算法 / 软件 / 测试 / 产品；以后要加「学习资料」这种新大类，数据里带上 group 字段就行，标签会自己长出来。<br><br>点每条右下角的 <b>☆ 收藏</b>存下来，顶层「我的收藏」里看。存在你这台电脑的浏览器里，换设备不同步。<br><br>有几条通知正文里确实没写截止日期，排在最后标「无截止」——<b>宁可空着，也不编一个日期</b>。<br><br>排序按<b>截止日期</b>，不按发布时间，这是它和普通通知列表的区别。</div>
+        <div class="note">这版<b>不再是假数据</b>：每天定时抓 7 个来源（教务处 / 学生处 / 电信学部本科教学 / 南洋·彭康·宗濂·启德四个书院 / 华为招聘），按截止日期排，筛掉跟你无关的。<br><br>4 个来源里<b>现在只有教务处在产出</b>：学生处发的是给「各单位」和毕业生的；电信学部本科教学网 2025-06 之后没更新；南洋书院官网 2025-03 之后没更新。<b>彭康书院还在更新</b>（10 月还有学生代表大会的通知），宗濂偶尔发。崇实书院的通知页是个导航页、找不到列表，接不了；文治/仲英/励志/钱学森的域名解析不到（可能没有独立网站）。右边「抓取状态」就是把这件事摆出来——<b>一个来源是空的，本身就是信息</b>。<br><br>华为招聘是第二个大类「就业」的第一个来源，数据走校招官网的公开接口。但现在（11 月中）<b>2027 届秋招已经收尾，开放岗位是 0</b>，所以「就业」这一栏暂时是空的。等明年 3 月春招开了，它会自己长出内容，代码不用再改。<br><br>大部分本科通知其实走公众号和班级群，那些爬不到，只能靠人。<br><br>页面按<b>大类 → 子类</b>两级筛：「学校通知」下面再分 教务 / 奖助 / 竞赛…；「就业」下面分 <b>公司</b>（现在只有华为），每条岗位还会打一个<b>岗位方向</b>标签——芯片 / 硬件 / 嵌入式 / 算法 / 软件 / 测试 / 产品；以后要加「学习资料」这种新大类，数据里带上 group 字段就行，标签会自己长出来。<br><br>点每条右下角的 <b>☆ 收藏</b>存下来，顶层「我的收藏」里看。存在你这台电脑的浏览器里，换设备不同步。<br><br>有几条通知正文里确实没写截止日期，排在最后标「无截止」——<b>宁可空着，也不编一个日期</b>。<br><br>排序按<b>截止日期</b>，不按发布时间，这是它和普通通知列表的区别。</div>
       </section>
     </aside>
   </div>
@@ -342,6 +342,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     var aud=(it.audience&&it.audience.length)? it.audience.join(' · ') : '不限年级';
     var tags='<span class="tag cat">'+esc(it.category||'其他')+'</span>'
             +'<span class="tag">'+esc(aud)+'</span>';
+    if(it.topic && it.topic!=='其他') tags+='<span class="tag">'+esc(it.topic)+'</span>';
     if(it.jobcat) tags+='<span class="tag job">'+esc(it.jobcat)+'</span>';
     if(it.job_type) tags+='<span class="tag">'+esc(it.job_type)+'</span>';
     if(d!==null && d>=0 && d<=3) tags+='<span class="tag pin">最容易错过</span>';
@@ -428,7 +429,8 @@ footer a{border-bottom:1px solid var(--line-2);}
 
   // 子类标签：只列当前大类下真实出现的 category，不列空的
   function renderChips(list){
-    var ORDER=['教务','奖助','竞赛','科研','就业','讲座','招聘'];
+    var ORDER=['教务','奖助','竞赛','科研','就业','讲座','招聘',
+               '彭康书院','宗濂书院','启德书院','崇实书院','南洋书院'];
     var inGroup=list.filter(function(x){ return grp==='all' || grp==='fav' || (x.group||'学校通知')===grp; });
     var map={};
     inGroup.forEach(function(x){ var c=x.category||'其他'; map[c]=(map[c]||0)+1; });
@@ -537,6 +539,11 @@ footer a{border-bottom:1px solid var(--line-2);}
       sDate.textContent=((data.stats&&data.stats.today)||data.today||'').slice(5) || '—';
       var sBar=document.getElementById('s-bar');
       if(sBar) sBar.textContent=((data.stats&&data.stats.today)||data.today||'');
+      // 顶部黑条按真实来源生成，加一个源不用改这里
+      var srcs=(data.stats&&data.stats.sources)||[];
+      var nsrc=document.getElementById('s-nsrc'), ssrc=document.getElementById('s-srcs');
+      if(nsrc) nsrc.textContent=srcs.length;
+      if(ssrc) ssrc.textContent=srcs.map(function(x){return x.name;}).join(' / ');
       paint();
     })
     .catch(function(err){
