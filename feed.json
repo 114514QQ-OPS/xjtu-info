@@ -1,6 +1,6 @@
 {
   "stats": {
-    "today": "2026-11-15",
+    "today": "2026-11-16",
     "grade": "大一",
     "input": 43,
     "dropped": 34,
@@ -58,9 +58,9 @@
       },
       "score": 11,
       "deadline_parsed": "2026-11-16",
-      "days_left": 1,
+      "days_left": 0,
       "bucket": "头条",
-      "reason": "11/12 分，1 天后截止"
+      "reason": "11/12 分，0 天后截止"
     },
     {
       "category_raw": "奖项申报",
@@ -86,9 +86,9 @@
       },
       "score": 11,
       "deadline_parsed": "2026-11-16",
-      "days_left": 1,
+      "days_left": 0,
       "bucket": "头条",
-      "reason": "11/12 分，1 天后截止"
+      "reason": "11/12 分，0 天后截止"
     },
     {
       "category_raw": "考试安排",
@@ -114,9 +114,9 @@
       },
       "score": 11,
       "deadline_parsed": "2026-11-17",
-      "days_left": 2,
+      "days_left": 1,
       "bucket": "头条",
-      "reason": "11/12 分，2 天后截止"
+      "reason": "11/12 分，1 天后截止"
     },
     {
       "category_raw": "教改项目",
@@ -142,9 +142,9 @@
       },
       "score": 11,
       "deadline_parsed": "2026-11-18",
-      "days_left": 3,
+      "days_left": 2,
       "bucket": "头条",
-      "reason": "11/12 分，3 天后截止"
+      "reason": "11/12 分，2 天后截止"
     },
     {
       "category_raw": "竞赛安排",
@@ -165,14 +165,14 @@
       "scores": {
         "relevance": 2,
         "action": 3,
-        "urgency": 0,
+        "urgency": 1,
         "authority": 3
       },
-      "score": 8,
+      "score": 9,
       "deadline_parsed": "2026-11-30",
-      "days_left": 15,
+      "days_left": 14,
       "bucket": "列表",
-      "reason": "8/12 分"
+      "reason": "9/12 分"
     },
     {
       "category_raw": "质量控制",
@@ -284,7 +284,7 @@
       },
       "score": 11,
       "deadline_parsed": "2026-11-14",
-      "days_left": -1,
+      "days_left": -2,
       "bucket": "归档",
       "reason": "已过截止日期"
     }
@@ -496,7 +496,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 521 天，超出 60 天窗口"
+      "reason": "发布已 522 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -524,7 +524,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 619 天，超出 60 天窗口"
+      "reason": "发布已 620 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -552,7 +552,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 782 天，超出 60 天窗口"
+      "reason": "发布已 783 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -578,9 +578,9 @@
       },
       "score": 7,
       "deadline_parsed": "2026-05-22",
-      "days_left": -177,
+      "days_left": -178,
       "bucket": "丢弃",
-      "reason": "发布已 943 天，超出 60 天窗口"
+      "reason": "发布已 944 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -608,7 +608,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 972 天，超出 60 天窗口"
+      "reason": "发布已 973 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -636,7 +636,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 1118 天，超出 60 天窗口"
+      "reason": "发布已 1119 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -664,7 +664,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 1319 天，超出 60 天窗口"
+      "reason": "发布已 1320 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -692,7 +692,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 1347 天，超出 60 天窗口"
+      "reason": "发布已 1348 天，超出 60 天窗口"
     },
     {
       "category_raw": "竞赛",
@@ -718,9 +718,9 @@
       },
       "score": 9,
       "deadline_parsed": "2022-12-11",
-      "days_left": -1435,
+      "days_left": -1436,
       "bucket": "丢弃",
-      "reason": "发布已 1450 天，超出 60 天窗口"
+      "reason": "发布已 1451 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -748,7 +748,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 1507 天，超出 60 天窗口"
+      "reason": "发布已 1508 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -776,7 +776,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 1637 天，超出 60 天窗口"
+      "reason": "发布已 1638 天，超出 60 天窗口"
     },
     {
       "category_raw": "就业",
@@ -804,7 +804,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 1801 天，超出 60 天窗口"
+      "reason": "发布已 1802 天，超出 60 天窗口"
     },
     {
       "category_raw": "就业",
@@ -830,9 +830,9 @@
       },
       "score": 5,
       "deadline_parsed": "2026-12-08",
-      "days_left": 23,
+      "days_left": 22,
       "bucket": "丢弃",
-      "reason": "发布已 1804 天，超出 60 天窗口"
+      "reason": "发布已 1805 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -860,7 +860,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 2436 天，超出 60 天窗口"
+      "reason": "发布已 2437 天，超出 60 天窗口"
     },
     {
       "category_raw": "就业",
@@ -888,7 +888,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 2462 天，超出 60 天窗口"
+      "reason": "发布已 2463 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -916,7 +916,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 2483 天，超出 60 天窗口"
+      "reason": "发布已 2484 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -942,9 +942,9 @@
       },
       "score": 6,
       "deadline_parsed": "2027-02-17",
-      "days_left": 94,
+      "days_left": 93,
       "bucket": "丢弃",
-      "reason": "发布已 2503 天，超出 60 天窗口"
+      "reason": "发布已 2504 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -972,7 +972,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 2571 天，超出 60 天窗口"
+      "reason": "发布已 2572 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -998,9 +998,9 @@
       },
       "score": 7,
       "deadline_parsed": "2019-09-01",
-      "days_left": -2632,
+      "days_left": -2633,
       "bucket": "丢弃",
-      "reason": "发布已 2685 天，超出 60 天窗口"
+      "reason": "发布已 2686 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -1026,9 +1026,9 @@
       },
       "score": 8,
       "deadline_parsed": "2019-06-30",
-      "days_left": -2695,
+      "days_left": -2696,
       "bucket": "丢弃",
-      "reason": "发布已 2707 天，超出 60 天窗口"
+      "reason": "发布已 2708 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -1056,7 +1056,7 @@
       "deadline_parsed": null,
       "days_left": null,
       "bucket": "丢弃",
-      "reason": "发布已 2714 天，超出 60 天窗口"
+      "reason": "发布已 2715 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -1082,9 +1082,9 @@
       },
       "score": 9,
       "deadline_parsed": "2019-04-28",
-      "days_left": -2758,
+      "days_left": -2759,
       "bucket": "丢弃",
-      "reason": "发布已 2762 天，超出 60 天窗口"
+      "reason": "发布已 2763 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -1110,9 +1110,9 @@
       },
       "score": 5,
       "deadline_parsed": "2027-04-18",
-      "days_left": 154,
+      "days_left": 153,
       "bucket": "丢弃",
-      "reason": "发布已 2781 天，超出 60 天窗口"
+      "reason": "发布已 2782 天，超出 60 天窗口"
     },
     {
       "category_raw": "其他",
@@ -1138,9 +1138,9 @@
       },
       "score": 4,
       "deadline_parsed": "2027-04-08",
-      "days_left": 144,
+      "days_left": 143,
       "bucket": "丢弃",
-      "reason": "发布已 2781 天，超出 60 天窗口"
+      "reason": "发布已 2782 天，超出 60 天窗口"
     }
   ]
 }
