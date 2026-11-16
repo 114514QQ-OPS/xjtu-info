@@ -225,7 +225,7 @@ footer a{border-bottom:1px solid var(--line-2);}
         <div class="sub">西安交通大学 · 本科生通知聚合　<em>只放标题与链接，每天 08:00 自动更新</em></div>
       </div>
       <div class="headright">
-        <div class="stat"><b id="s-new">—</b><span>今日新通知</span></div>
+        <div class="stat"><b id="s-new">—</b><span>收录条目</span></div>
         <div class="stat"><b id="s-week">—</b><span>本周截止</span></div>
         <div class="stat"><b id="s-date">—</b><span>数据截至</span></div>
       </div>
@@ -244,6 +244,11 @@ footer a{border-bottom:1px solid var(--line-2);}
         <input id="q" type="search" placeholder="搜标题、关键词，比如「转专业」「四六级」" aria-label="搜索通知">
       </label>
       <button class="sortbtn" id="sort">按截止日期排序 ↓</button>
+    </div>
+    <!-- 岗位方向：只在「就业」大类里出现，其他大类没有这一行 -->
+    <div class="filterline dirline" id="dirline" hidden>
+      <span class="glabel">方向</span>
+      <div class="chips" id="dirs"></div>
     </div>
   </div>
 
@@ -267,7 +272,7 @@ footer a{border-bottom:1px solid var(--line-2);}
 
       <section>
         <h3>这版是什么</h3>
-        <div class="note">这版<b>不再是假数据</b>：每天定时抓 7 个来源（教务处 / 学生处 / 电信学部本科教学 / 南洋·彭康·宗濂·启德四个书院 / 华为招聘），按截止日期排，筛掉跟你无关的。<br><br>4 个来源里<b>现在只有教务处在产出</b>：学生处发的是给「各单位」和毕业生的；电信学部本科教学网 2025-06 之后没更新；南洋书院官网 2025-03 之后没更新。<b>彭康书院还在更新</b>（10 月还有学生代表大会的通知），宗濂偶尔发。崇实书院的通知页是个导航页、找不到列表，接不了；文治/仲英/励志/钱学森的域名解析不到（可能没有独立网站）。右边「抓取状态」就是把这件事摆出来——<b>一个来源是空的，本身就是信息</b>。<br><br>华为招聘是第二个大类「就业」的第一个来源，数据走校招官网的公开接口。但现在（11 月中）<b>2027 届秋招已经收尾，开放岗位是 0</b>，所以「就业」这一栏暂时是空的。等明年 3 月春招开了，它会自己长出内容，代码不用再改。<br><br>大部分本科通知其实走公众号和班级群，那些爬不到，只能靠人。<br><br>页面按<b>大类 → 子类</b>两级筛：「学校通知」下面再分 教务 / 奖助 / 竞赛…；「就业」下面分 <b>公司</b>（现在只有华为），每条岗位还会打一个<b>岗位方向</b>标签——芯片 / 硬件 / 嵌入式 / 算法 / 软件 / 测试 / 产品；以后要加「学习资料」这种新大类，数据里带上 group 字段就行，标签会自己长出来。<br><br>点每条右下角的 <b>☆ 收藏</b>存下来，顶层「我的收藏」里看。存在你这台电脑的浏览器里，换设备不同步。<br><br>有几条通知正文里确实没写截止日期，排在最后标「无截止」——<b>宁可空着，也不编一个日期</b>。<br><br>排序按<b>截止日期</b>，不按发布时间，这是它和普通通知列表的区别。</div>
+        <div class="note">这版<b>不再是假数据</b>：每天定时抓 <b>13 个来源</b>——学校这边是教务处 / 学生处 / 电信学部本科教学 / 四个书院（南洋·彭康·宗濂·启德）；就业那边是 <b>华为 / 小米 / 比亚迪 / 中兴 / 大疆 / 宁德时代</b> 六家企业的校招官网。按截止日期排，筛掉跟你无关的。<br><br>学校这边<b>仍然只有教务处在稳定产出</b>：学生处发的是给「各单位」和毕业生的；电信学部本科教学网 2025-06 后没更新；南洋书院官网 2025-03 后没更新；<b>彭康书院还在更新</b>，宗濂偶尔发。崇实书院的通知页是导航页、找不到列表；文治/仲英/励志/钱学森的域名解析不到。右边「抓取状态」就是把这件事摆出来——<b>一个来源是空的，本身就是信息</b>。<br><br>「就业」这一栏现在 100 条左右岗位，来自 6 家公司的公开接口（华为 11 月中秋招已收尾，暂时 0 条）。每家公司是一个子类；每条岗位再打一个<b>方向</b>标签（芯片 / 算法 / 嵌入式 / 硬件 / 测试 / 软件 / 产品），就业页面上那一排「方向」就是用来筛这个的。<br><br>接一家新公司等于写一套新解析——每家的接口都不一样，小米、比亚迪各花了半小时，中兴/大疆/宁德都用同一家招聘云（Moka），所以共用一个模块、返回体还是加密的。接进来以后标签会自己长，页面不用改。<br><br>大部分本科通知其实走公众号和班级群，那些爬不到，只能靠人。<br><br>点每条右下角的 <b>☆ 收藏</b>存下来，顶层「我的收藏」里看。存在你这台电脑的浏览器里，换设备不同步。<br><br>有几条通知正文里确实没写截止日期，排在最后标「无截止」——<b>宁可空着，也不编一个日期</b>。排序按<b>截止日期</b>，不按发布时间，这是它和普通通知列表的区别。</div>
       </section>
     </aside>
   </div>
@@ -285,8 +290,9 @@ footer a{border-bottom:1px solid var(--line-2);}
       sortBtn=document.getElementById('sort'), soonEl=document.getElementById('soon'),
       healthEl=document.getElementById('health'),
       sNew=document.getElementById('s-new'), sWeek=document.getElementById('s-week'),
-      sDate=document.getElementById('s-date');
-  var grp='all', cat='all', asc=true, items=[], list0=[], shownCount=0, STATS={};
+      sDate=document.getElementById('s-date'),
+      dirs=document.getElementById('dirs'), dirline=document.getElementById('dirline');
+  var grp='all', cat='all', dir='all', asc=true, items=[], list0=[], shownCount=0, STATS={};
 
   function esc(v){
     return String(v==null?'':v).replace(/[&<>"]/g,function(c){
@@ -354,6 +360,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     li.dataset.group=it.group||'学校通知';
     li.dataset.id=it.id||'';
     li.dataset.days=(d===null? 9999 : d);
+    li.dataset.dir=it.jobcat||'';
     li.dataset.title=it.title+' '+(it.jobcat||'')+' '+(it.job_type||'')+' '+(it.source||'');
     li.innerHTML=
       '<div class="days '+cls(d)+'"><b>'+num+'</b><span>'+lab+'</span></div>'
@@ -384,6 +391,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     items.forEach(function(el){
       var ok=(grp==='all'||grp==='fav'||el.dataset.group===grp)
           && (cat==='all'||el.dataset.cat===cat)
+          && (dir==='all'||el.dataset.dir===dir)
           && (!kw || el.textContent.toLowerCase().indexOf(kw)>-1);
       el.style.display=ok?'':'none';
       if(ok) shown++;
@@ -398,7 +406,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     feed.innerHTML='';
     arr.forEach(function(it){ feed.appendChild(renderItem(it)); });
     items=Array.prototype.slice.call(feed.querySelectorAll('.item'));
-    sortItems(); refresh();
+    sortItems(); renderDirs(); refresh();
     if(grp==='fav' && !arr.length){
       empty.style.display='block';
       empty.innerHTML='<b>还没有收藏</b>在通知右下角点「☆ 收藏」，收藏的都会出现在这里。';
@@ -430,7 +438,8 @@ footer a{border-bottom:1px solid var(--line-2);}
   // 子类标签：只列当前大类下真实出现的 category，不列空的
   function renderChips(list){
     var ORDER=['教务','奖助','竞赛','科研','就业','讲座','招聘',
-               '彭康书院','宗濂书院','启德书院','崇实书院','南洋书院'];
+               '彭康书院','宗濂书院','启德书院','崇实书院','南洋书院',
+               '华为','小米','比亚迪','中兴通讯','大疆','宁德时代'];
     var inGroup=list.filter(function(x){ return grp==='all' || grp==='fav' || (x.group||'学校通知')===grp; });
     var map={};
     inGroup.forEach(function(x){ var c=x.category||'其他'; map[c]=(map[c]||0)+1; });
@@ -476,7 +485,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     var b=e.target.closest('.gtab');
     if(!b) return;
     grp=b.dataset.group;
-    cat='all';                       // 换大类时，子类选择清零
+    cat='all'; dir='all';           // 换大类时，子类和方向选择都清零
     Array.prototype.forEach.call(groupsEl.children,function(c){
       c.setAttribute('aria-pressed', c===b?'true':'false');
     });
@@ -513,6 +522,38 @@ footer a{border-bottom:1px solid var(--line-2);}
     if(!b) return;
     cat=b.dataset.cat;
     Array.prototype.forEach.call(chips.children,function(c){
+      c.setAttribute('aria-pressed', c===b?'true':'false');
+    });
+    refresh();
+  });
+
+  // 岗位方向（只在「就业」大类里出现）
+  function renderDirs(){
+    if(grp!=='就业'){ dirline.hidden=true; return; }
+    dirline.hidden=false;
+    var ORDER=['芯片','算法','嵌入式','硬件','测试','软件','产品','其他'];
+    var inGroup=list0.filter(function(x){ return (x.group||'学校通知')==='就业'; });
+    var map={};
+    inGroup.forEach(function(x){ var c=x.jobcat||'其他'; map[c]=(map[c]||0)+1; });
+    var names=Object.keys(map).sort(function(a,b){
+      var ia=ORDER.indexOf(a), ib=ORDER.indexOf(b);
+      if(ia<0) ia=99; if(ib<0) ib=99;
+      return ia-ib;
+    });
+    var html='<button class="chip" aria-pressed="'+(dir==='all')+'" data-dir="all">全部<span class="n">'
+             +inGroup.length+'</span></button>';
+    names.forEach(function(c){
+      html+='<button class="chip" aria-pressed="'+(dir===c)+'" data-dir="'+esc(c)+'">'
+            +esc(c)+'<span class="n">'+map[c]+'</span></button>';
+    });
+    dirs.innerHTML=html;
+  }
+
+  dirs.addEventListener('click',function(e){
+    var b=e.target.closest('.chip');
+    if(!b) return;
+    dir=b.dataset.dir;
+    Array.prototype.forEach.call(dirs.children,function(c){
       c.setAttribute('aria-pressed', c===b?'true':'false');
     });
     refresh();
