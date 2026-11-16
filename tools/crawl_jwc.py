@@ -17,6 +17,7 @@ crawl_jwc.py —— 抓西安交通大学教务处的"教学通知"
 import argparse
 import html as html_lib
 import json
+import moka
 import re
 import ssl
 import sys
@@ -49,20 +50,28 @@ def fetch(url: str) -> str:
     return raw.decode("utf-8", "ignore")
 
 
-def fetch_json(url: str) -> str:
-    """给华为招聘接口用：它挑 UA，而且必须带 Referer + X-Requested-With。
+def fetch_json(url: str, referer: str = "https://career.huawei.com/reccampportal/portal5/campus-recruitment.html") -> str:
+    """给各家公司招聘接口用：它们挑 UA，多数还要正确的 Referer。
 
-    用普通 fetch() 直接访问会 403 —— 这个坑值得记一笔。
+    华为缺 Referer 直接 403；小米裸请求其实能通，但带上 Referer 更保险。
+    这些接口偶尔会连不上（本机代理不稳、对方限流），所以重试 3 次再放弃。
     """
     req = urllib.request.Request(url, headers={
         "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                        "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"),
-        "Referer": "https://career.huawei.com/reccampportal/portal5/campus-recruitment.html",
+        "Referer": referer,
         "Accept": "application/json, text/plain, */*",
         "X-Requested-With": "XMLHttpRequest",
     })
-    with urllib.request.urlopen(req, timeout=25, context=CTX) as resp:
-        return resp.read().decode("utf-8", "ignore")
+    last = None
+    for k in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=30, context=CTX) as resp:
+                return resp.read().decode("utf-8", "ignore")
+        except Exception as e:          # noqa: BLE001 —— 网络错误种类太多，统一重试
+            last = e
+            time.sleep(1.5 * (k + 1))
+    raise last
 
 
 def to_text(h: str) -> str:
@@ -552,6 +561,219 @@ def huawei_jobs(_url=None, max_items: int = 40) -> list:
     return out[:max_items]
 
 
+# ---------------- 小米 ----------------
+# 接口难找：/campus 是营销页，真正的岗位接口在 opportunities.html 里动态加载的
+# assets/js/jobs.js 中（不是 api.js —— 那个只有新闻和日程）。
+XIAOMI_JOB_API = "https://hr.xiaomi.com/website/api/agent/searchJobPage"
+XIAOMI_REFERER = "https://hr.xiaomi.com/opportunities.html"
+
+
+def xiaomi_item(j: dict) -> dict:
+    """把小米接口的一条职位翻成我们自己的格式。"""
+    title = (j.get("title") or "").strip()
+    cities = j.get("cityZhNames") or []
+    city = "·".join([c for c in cities[:3] if c])
+    dept = (j.get("levelOneDeptName") or "").strip()
+    desc = re.sub(r"\s+", " ", (j.get("description") or "")).strip()
+    req = re.sub(r"\s+", " ", (j.get("requirement") or "")).strip()
+    head = " · ".join([x for x in (city, dept) if x])
+    summary = ((head + "。" + desc) if (head and desc) else (head or desc))[:120]
+
+    # 详情页在 mioffice 域，接口里有时直接给 url
+    url = j.get("url") or ("https://xiaomi.jobs.f.mioffice.cn/campus/position/%s/detail"
+                           % j.get("jobPostId"))
+
+    return {
+        "title": title,
+        "url": url,
+        "published_at": (j.get("publishTime") or "")[:10] or None,
+        # 小米岗位没有公开的截止日期，宁可空着也不编
+        "deadline": None,
+        "summary": summary or None,
+        "body_text": (desc + " " + req)[:2000],
+        "audience": ["不限"],
+        # 就业大类下面一层是「公司」，category 直接放公司名
+        "category": "小米",
+        "category_raw": "小米",
+        "group": "就业",
+        "firm": "小米",
+        "jobcat": guess_job_cat(title, dept),
+        "source": "小米招聘",
+        "source_type": "小米招聘",
+        "job_type": "校招",
+        "job_dept": dept or None,
+    }
+
+
+def xiaomi_jobs(_url=None, max_items: int = 20) -> list:
+    """小米校招职位。type=2 是校招（约 1060 条），一页 100 条。"""
+    out, seen = [], set()
+    page, page_total = 1, 1
+    while page <= page_total and len(out) < max_items:
+        url = ("%s?keyword=&cityZhNames=&pageNum=%d&pageSize=100&type=2&_t=%d"
+               % (XIAOMI_JOB_API, page, int(time.time() * 1000)))
+        try:
+            data = json.loads(fetch_json(url, referer=XIAOMI_REFERER))
+        except Exception as e:
+            print("  [小米招聘] 第 %d 页失败 %s: %s" % (page, type(e).__name__, e))
+            break
+        d = data.get("data") or {}
+        rows = d.get("list") or []
+        page_total = int(d.get("pageTotal") or 1)
+        if page == 1:
+            print("  [小米招聘] 校招共 %s 条，%d 页" % (d.get("total"), page_total))
+        for j in rows:
+            jid = j.get("id")
+            if not jid or jid in seen:
+                continue
+            seen.add(jid)
+            out.append(xiaomi_item(j))
+            if len(out) >= max_items:
+                break
+        page += 1
+    print("  [小米招聘] 取到 %d 条" % len(out))
+    return out[:max_items]
+
+
+# ---------------- 比亚迪 ----------------
+# 坑：前端写的接口是 "/portal-api/xxx"，但 axios 的 baseURL 是 "/portal/api"，
+# 所以真实网关要双前缀。只写一层会命中 Apache 静态服务，返回 404 的 "myserver" 页。
+BYD_API = "https://job.byd.com/portal/api/portal-api"
+BYD_TOPIC = "2076475538687475714"   # 校招主题 code，接口只做非空校验，填错也能通
+
+
+def fetch_post_json(url: str, body: dict, referer: str, origin: str) -> str:
+    """比亚迪要 POST + JSON body。"""
+    data = json.dumps(body).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"),
+        "Accept": "application/json, text/plain, */*",
+        "Content-Type": "application/json;charset=UTF-8",
+        "Origin": origin,
+        "Referer": referer,
+        "lang": "zh_CN",
+    }, method="POST")
+    with urllib.request.urlopen(req, timeout=25, context=CTX) as resp:
+        return resp.read().decode("utf-8", "ignore")
+
+
+def byd_item(j: dict) -> dict:
+    title = (j.get("jobName") or "").strip()
+    place = (j.get("workPlace") or "").replace(",", "·").strip()
+    jt = (j.get("jobType") or "").strip()
+    head = " · ".join([x for x in (place, jt) if x])
+    return {
+        "title": title,
+        "url": ("https://job.byd.com/portal/pc/school/schoolPositionDetail?id=%s&abroad=%s&degree=%s"
+                % (j.get("id"), j.get("abroad") or "", j.get("degree") or "")),
+        "published_at": (j.get("updateTime") or "")[:10] or None,
+        "deadline": None,          # 比亚迪不公开截止日期，宁可空着
+        "summary": (head + "。比亚迪 2027 届校园招聘") if head else "比亚迪 2027 届校园招聘",
+        "body_text": head,
+        "audience": ["不限"],
+        "category": "比亚迪",
+        "category_raw": "比亚迪",
+        "group": "就业",
+        "firm": "比亚迪",
+        "jobcat": guess_job_cat(title, jt),
+        "source": "比亚迪招聘",
+        "source_type": "比亚迪招聘",
+        "job_type": "校招",
+        "job_dept": jt or None,
+    }
+
+
+def byd_jobs(_url=None, max_items: int = 20) -> list:
+    """比亚迪 2027 届校招职位（实测约 367 条）。"""
+    body = {
+        "topicCode": BYD_TOPIC, "batch": "2027", "campusNature": "008501",
+        "abroad": "00112", "degree": "", "jobType": [], "researchDirection": [],
+        "workPlace": [], "keywords": "", "pageSize": 100, "pageIndex": 1,
+    }
+    try:
+        data = json.loads(fetch_post_json(
+            BYD_API + "/schoolPortal/queryPositionList", body,
+            referer="https://job.byd.com/portal/pc/school/schoolPositionList",
+            origin="https://job.byd.com"))
+    except Exception as e:
+        print("  [比亚迪招聘] 接口失败 %s: %s" % (type(e).__name__, e))
+        return []
+    rows = data.get("data") or []
+    total = (data.get("page") or {}).get("totalCount")
+    print("  [比亚迪招聘] 校招共 %s 条，取前 %d 条" % (total, min(len(rows), max_items)))
+    return [byd_item(j) for j in rows][:max_items]
+
+
+# ---------------- Moka 系公司（中兴 / 大疆 / 宁德时代） ----------------
+# 这三家的校招站都是 Moka 建的，接口一样、返回体都加密，
+# 所以解密和翻页都放在 moka.py 里，这里只写每家门口的 orgId/siteId。
+MOKA_SITES = [
+    ("中兴通讯", "https://app.mokahr.com/campus-recruitment/zte/46903", "zte", "46903"),
+    ("大疆", "https://apply.careers.dji.com/campus-recruitment/dji/143359", "dji", "143359"),
+    ("宁德时代", "https://talent.catl.com/campus-recruitment/catlhr/148948", "catlhr", "148948"),
+]
+
+
+def moka_item(j: dict, firm: str) -> dict:
+    """把 Moka 的一条岗位翻成我们自己的格式。"""
+    title = (j.get("title") or "").strip()
+    locs = []
+    for l in (j.get("locations") or []):
+        nm = (l.get("cityName") or "").strip() or (l.get("address") or "").strip()
+        if nm:
+            locs.append(nm)
+    city = "·".join(locs[:3])
+    zn = ((j.get("zhineng") or {}).get("name") or "").strip()
+    desc = to_text(j.get("jobDescription") or "")[:300]
+
+    # 岗位本身没有截止日期，但所属招聘项目可能有（比如「应届生招聘」到 2027-08-31）
+    deadline = None
+    try:
+        deadline = j["projectFolder"]["settings"]["deliveryLimit"]["content"]["endDate"][:10] or None
+    except Exception:                     # noqa: BLE001 —— 结构不保证有，取不到就当没有
+        pass
+
+    head = " · ".join([x for x in (city, zn) if x])
+    summary = ((head + "。" + desc) if (head and desc) else (head or desc))[:120]
+
+    return {
+        "title": title,
+        "url": "%s#/job/%s" % (j.get("_portal") or "", j.get("id")),
+        "published_at": (j.get("publishedAt") or "")[:10] or None,
+        "deadline": deadline,
+        "summary": summary or None,
+        "body_text": (desc or "")[:2000],
+        "audience": ["不限"],
+        "category": firm,
+        "category_raw": firm,
+        "group": "就业",
+        "firm": firm,
+        "jobcat": guess_job_cat(title, zn),
+        "source": firm + "招聘",
+        "source_type": firm + "招聘",
+        "job_type": "校招",
+        "job_dept": zn or None,
+    }
+
+
+def moka_jobs(firm: str, portal: str, org: str, site: str, max_items: int = 20):
+    """做成一家人、一个 parser 的样子，好塞进 SOURCES。"""
+    def run(_url=None) -> list:
+        try:
+            rows = moka.all_jobs(portal, org, site, max_items=max_items)
+        except Exception as e:            # noqa: BLE001
+            print("  [%s] 接口失败 %s: %s" % (firm, type(e).__name__, e))
+            return []
+        out = []
+        for j in rows:
+            j["_portal"] = portal
+            out.append(moka_item(j, firm))
+        print("  [%s] 取到 %d 条岗位" % (firm, len(out)))
+        return out
+    return run
+
+
 # 站点注册表：以后加一个新来源，就在这里加一行，别的都不用动
 SOURCES = [
     {"name": "教务处", "url": LIST_URL, "parser": parse_list, "key": "jwc"},
@@ -559,7 +781,18 @@ SOURCES = [
     {"name": "电信学部", "url": "http://eieug.xjtu.edu.cn/tzgg.htm", "parser": parse_list_eieug, "key": "eieug"},
     {"name": "南洋书院", "url": "http://nanyang.xjtu.edu.cn/xwtz/tzgg.htm", "parser": parse_list_nanyang, "key": "ny"},
     {"name": "华为招聘", "url": HUAWEI_JOB_API, "parser": huawei_jobs, "key": "huawei", "detail": False},
+    {"name": "小米招聘", "url": XIAOMI_JOB_API, "parser": xiaomi_jobs, "key": "xiaomi", "detail": False},
+    {"name": "比亚迪招聘", "url": BYD_API, "parser": byd_jobs, "key": "byd", "detail": False},
 ]
+
+# Moka 系公司：一行一家（名字, 门户, orgId, siteId）
+for _firm, _portal, _org, _site in MOKA_SITES:
+    SOURCES.append({
+        "name": _firm + "招聘", "url": _portal,
+        "parser": moka_jobs(_firm, _portal, _org, _site),
+        "key": {"中兴通讯": "zte", "大疆": "dji", "宁德时代": "catl"}.get(_firm, _org),
+        "detail": False,
+    })
 
 # 书院批量注册：每加一个书院，只在 SHUYUAN_SITES 里加一行
 _SY_KEYS = {"彭康书院": "pk", "宗濂书院": "zl", "启德书院": "qd", "崇实书院": "cs", "南洋书院": "ny"}
@@ -589,8 +822,11 @@ def main() -> int:
         except Exception as e:
             print("  [%s] 列表页失败 %s: %s" % (src["name"], type(e).__name__, e))
             continue
-        print("%s 列表页 %d 条，取前 %d 条抓详情" % (src["name"], len(listed), min(args.limit, len(listed))))
         cap = len(listed) if src.get("detail") is False else args.limit
+        if src.get("detail", True):
+            print("%s 列表页 %d 条，取前 %d 条抓详情" % (src["name"], len(listed), min(cap, len(listed))))
+        else:
+            print("%s 接口返回 %d 条，取前 %d 条" % (src["name"], len(listed), min(cap, len(listed))))
         for i, it in enumerate(listed[:cap], 1):
             if it["url"] in seen_url:
                 continue
