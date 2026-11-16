@@ -69,13 +69,18 @@ SOURCE_WEIGHT = {
 
 GRADE_ORDER = {"大一": 1, "大二": 2, "大三": 3, "大四": 4, "研究生": 5}
 
-CATEGORIES = ["教务", "奖助", "竞赛", "科研", "就业", "讲座", "生活", "招聘", "其他"]
+CATEGORIES = ["教务", "奖助", "竞赛", "科研", "就业", "讲座", "生活", "招聘", "华为", "其他"]
 
 # 招聘类（企业岗位）走一套不同的规则：
 #   学校通知看的是"有没有截止日期、要不要交材料"，
 #   岗位看的是"这活儿是不是给学生的、什么时候过期"。
 # 所以这类直接跳过关键词硬规则，靠 deadline + 来源权重打分。
-JOB_CATS = {"招聘"}
+#
+# 「就业」大类下面的子类是**公司**：华为、以后的中兴/字节…
+# JOB_FIRMS 里列的公司，即使这次抓到 0 个岗位，页面标签也会显示出来，
+# 让你看得见"这个源我接了，只是它现在空着"。
+JOB_FIRMS = ["华为"]
+JOB_CATS = {"招聘"} | set(JOB_FIRMS)
 
 PUBLISH_WINDOW_DAYS = 60      # 发布超过这么多天的，不进主列表
 DEDUP_THRESHOLD = 0.82        # 标题相似度超过这个值视为同一条
@@ -304,7 +309,7 @@ def decide(item: dict, grade: str, today: date) -> dict:
 #   ② 在这里的 GROUP_BY_CATEGORY 加一行映射（比如 {"实习": "实习机会"}）
 # 前端不用改——标签页是按数据里出现过哪些 group 自动长出来的。
 GROUP_DEFAULT = "学校通知"
-GROUP_BY_CATEGORY: dict[str, str] = {"招聘": "就业"}
+GROUP_BY_CATEGORY: dict[str, str] = {"招聘": "就业", "华为": "就业"}
 
 
 def process(raw: list, grade: str = "大一", today: date | None = None) -> dict:
@@ -396,6 +401,15 @@ def process(raw: list, grade: str = "大一", today: date | None = None) -> dict
         g = it.get("group") or GROUP_DEFAULT
         grp[g] = grp.get(g, 0) + 1
     stats["groups"] = grp
+
+    # 就业大类下面的公司名单：注册过的 + 这次数据里真的出现的。
+    # 页面用它画子类标签，所以公司这次 0 岗位标签也不会消失。
+    firms = list(JOB_FIRMS)
+    for it in result:
+        c = it.get("category") or ""
+        if (it.get("group") == "就业") and c and c not in firms:
+            firms.append(c)
+    stats["firms"] = firms
 
     return {"stats": stats, "items": result, "dropped": dropped + dropped_late}
 
