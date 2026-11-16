@@ -69,7 +69,8 @@ SOURCE_WEIGHT = {
 
 GRADE_ORDER = {"大一": 1, "大二": 2, "大三": 3, "大四": 4, "研究生": 5}
 
-CATEGORIES = ["教务", "奖助", "竞赛", "科研", "就业", "讲座", "生活", "招聘", "华为", "其他"]
+CATEGORIES = ["教务", "奖助", "竞赛", "科研", "就业", "讲座", "生活", "招聘", "华为",
+              "彭康书院", "宗濂书院", "启德书院", "崇实书院", "南洋书院", "其他"]
 
 # 招聘类（企业岗位）走一套不同的规则：
 #   学校通知看的是"有没有截止日期、要不要交材料"，
@@ -81,6 +82,12 @@ CATEGORIES = ["教务", "奖助", "竞赛", "科研", "就业", "讲座", "生�
 # 让你看得见"这个源我接了，只是它现在空着"。
 JOB_FIRMS = ["华为"]
 JOB_CATS = {"招聘"} | set(JOB_FIRMS)
+
+# 书院：通知是给"住在这个书院的本科生"的（宿舍、评优、学代会、志愿活动），
+# 标题里不一定有"报名/申请"，硬套关键词会全被误杀。
+# 所以书院类也跳过关键词规则，只靠 60 天窗口 + 打分。
+BOOK_HOUSE_CATS = {"彭康书院", "宗濂书院", "启德书院", "崇实书院", "南洋书院"}
+SKIP_KEYWORD_CATS = JOB_CATS | BOOK_HOUSE_CATS
 
 PUBLISH_WINDOW_DAYS = 60      # 发布超过这么多天的，不进主列表
 DEDUP_THRESHOLD = 0.82        # 标题相似度超过这个值视为同一条
@@ -193,9 +200,10 @@ def hard_filter(item: dict) -> tuple[bool, str]:
     body = (item.get("body_text") or "")[:800]
     text = title + body
 
-    # 招聘岗位天然不含"报名/申请"这类词，用学校通知的规则筛会把它们全杀光
-    if item.get("category") in JOB_CATS:
-        return True, "招聘类，跳过关键词规则"
+    # 招聘岗位天然不含"报名/申请"这类词，用学校通知的规则筛会把它们全杀光。
+    # 书院通知同理（宿舍评比、学代会提案、志愿活动）。
+    if item.get("category") in SKIP_KEYWORD_CATS:
+        return True, "招聘/书院类，跳过关键词规则"
 
     for w in DROP_WORDS:
         if w in title:
@@ -291,6 +299,13 @@ def decide(item: dict, grade: str, today: date) -> dict:
     else:
         s["bucket"] = "归档"
         s["reason"] = f"{s['score']}/12 分，低于列表阈值"
+
+    # 书院通知绝大多数正文里不写截止日期（宿舍评比、学代会提案、作品征集），
+    # 打分自然偏低。可它们是"就发生在你楼下"的事，沉到归档等于看不见，
+    # 所以：书院类 + 没截止日期 → 至少留在列表。有截止日期且过了的，照样归档。
+    if s["bucket"] == "归档" and item.get("category") in BOOK_HOUSE_CATS and not dl_date:
+        s["bucket"] = "列表"
+        s["reason"] = f"{s['score']}/12 分，书院通知无截止日期，保留在列表"
     return s
 
 
@@ -312,7 +327,7 @@ GROUP_DEFAULT = "学校通知"
 GROUP_BY_CATEGORY: dict[str, str] = {"招聘": "就业", "华为": "就业"}
 
 
-def process(raw: list, grade: str = "大一", today: date | None = None) -> dict:
+def process(raw: list, grade: str = "大一", today: date | None = None, input_path=None) -> dict:
     today = today or date.today()
     dropped, survivors = [], []
 
@@ -394,6 +409,18 @@ def process(raw: list, grade: str = "大一", today: date | None = None) -> dict
         s = it.get("source") or "未知"
         src_out[s] = src_out.get(s, 0) + 1
     stats["sources"] = [{"name": s, "in": n, "out": src_out.get(s, 0)} for s, n in src_in.items()]
+    # 爬虫会在 raw.json 旁边放一份 sources.json（这次接了哪些源）。
+    # 今天 0 条的源不在 raw 里，但页面上要看得到——"这个源我接了，只是它现在空着"。
+    try:
+        _sp = Path(input_path).with_name("sources.json") if input_path else None
+        if _sp and _sp.exists():
+            declared = json.loads(_sp.read_text(encoding="utf-8"))
+            have = {s["name"] for s in stats["sources"]}
+            for name in declared:
+                if name not in have:
+                    stats["sources"].append({"name": name, "in": 0, "out": 0})
+    except Exception:
+        pass
 
     # 每个大类入选多少条，页面顶层标签用。
     grp = {}
@@ -480,7 +507,7 @@ def main() -> int:
         return 1
 
     today = parse_date(args.today) or date.today()
-    out = process(raw, grade=args.grade, today=today)
+    out = process(raw, grade=args.grade, today=today, input_path=args.input)
 
     if args.output:
         Path(args.output).write_text(
