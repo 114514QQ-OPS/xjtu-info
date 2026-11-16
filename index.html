@@ -80,6 +80,13 @@ h1{margin:0;font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1;}
 /* 第二行：子类 + 搜索 + 排序 */
 .filterline{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:11px 0;}
 .filterline[hidden]{display:none;}
+/* 校招流程：一行小字，只在就业大类出现。写死的是常识，不是数据，所以用最轻的样式 */
+.flowline{display:flex;align-items:baseline;gap:14px;padding:0 0 12px;flex-wrap:wrap;}
+.flowline[hidden]{display:none;}
+.flowline .flow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);}
+.flowline .flow span{color:var(--ink);}
+.flowline .flow i{font-style:normal;color:var(--line-2);}
+.flowline .flow em{margin-left:6px;font-style:normal;font-size:11.5px;color:var(--ink-3);}
 .gtab.favtab{margin-left:auto;}
 /* 收藏按钮：放在每条右下角，和「原文」并排 */
 .star{
@@ -256,6 +263,18 @@ footer a{border-bottom:1px solid var(--line-2);}
       <span class="glabel">方向</span>
       <div class="chips" id="dirs"></div>
     </div>
+    <!-- 校招流程：这是行业常识，不是抓来的数据，所以单独一段、写明「说明」 -->
+    <div class="flowline" id="flowline" hidden>
+      <span class="glabel">流程</span>
+      <div class="flow">
+        <span>网申投递</span><i>›</i>
+        <span>笔试 / 测评</span><i>›</i>
+        <span>技术面 1–2 轮</span><i>›</i>
+        <span>HR 面</span><i>›</i>
+        <span>offer</span>
+        <em>面试是线上还是线下，由 HR 在笔试通过后通知，岗位页不写这一项</em>
+      </div>
+    </div>
   </div>
 
   <div class="layout">
@@ -297,7 +316,8 @@ footer a{border-bottom:1px solid var(--line-2);}
       healthEl=document.getElementById('health'),
       sNew=document.getElementById('s-new'), sWeek=document.getElementById('s-week'),
       sDate=document.getElementById('s-date'),
-      dirs=document.getElementById('dirs'), dirline=document.getElementById('dirline');
+      dirs=document.getElementById('dirs'), dirline=document.getElementById('dirline'),
+      flowline=document.getElementById('flowline');
   var grp='all', cat='all', dir='all', asc=true, items=[], list0=[], shownCount=0, STATS={};
 
   function esc(v){
@@ -538,8 +558,9 @@ footer a{border-bottom:1px solid var(--line-2);}
 
   // 岗位方向（只在「就业」大类里出现）
   function renderDirs(){
-    if(grp!=='就业'){ dirline.hidden=true; return; }
+    if(grp!=='就业'){ dirline.hidden=true; flowline.hidden=true; return; }
     dirline.hidden=false;
+    flowline.hidden=false;
     var ORDER=['芯片','算法','嵌入式','硬件','测试','软件','产品','其他'];
     var inGroup=list0.filter(function(x){ return (x.group||'学校通知')==='就业'; });
     var map={};
