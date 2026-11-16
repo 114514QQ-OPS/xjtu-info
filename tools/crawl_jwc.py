@@ -198,6 +198,75 @@ def parse_list_eieug(page_url: str) -> list:
     return uniq
 
 
+# ============================================================================
+# 书院：每个书院的网站是同一套建站系统，长得几乎一样，所以写一个通用解析器
+#   彭康  <span class="time">2026-10-16</span> <a href="info/1070/2645.htm">标题</a>
+#   启德  <span class="time fr">2024-09-19</span> <a href="../info/1016/2931.htm" title="标题">标题</a>
+#   宗濂  <a class="clearfix" href="info/1036/6731.htm" title="标题"><p>标题…</p>
+#           <span class="news_time fr">2026-10-16</span></a>
+# 三种写法的共同点：都在 <li> 里、都有 info/ 链接、都带一个 2026-10-16 格式的日期。
+# 所以不针对每一种写一遍，而是"每个 li 里找链接 + 找最后一个日期"。
+# ============================================================================
+_LI = re.compile(r"(?is)<li[^>]*>(.*?)</li>")
+_A_ANY = re.compile(r'(?is)<a[^>]*href="([^"]*info/[^"]+)"([^>]*)>(.*?)</a>')
+_A_TITLE = re.compile(r'(?is)title="([^"]+)"')
+_DATE = re.compile(r"(20\d{2})-(\d{1,2})-(\d{1,2})")
+
+
+def parse_list_shuyuan(page_url: str, name: str) -> list:
+    """书院通知列表。name 是书院名，会直接拿去当 category。"""
+    h = fetch(page_url)
+    out = []
+    for block in _LI.findall(h):
+        m = _A_ANY.search(block)
+        if not m:
+            continue
+        href, attrs, inner = m.group(1), m.group(2), m.group(3)
+        if "weixin" in href or "javascript" in href:
+            continue
+
+        # 标题：优先用 title 属性（最完整）；没有就从 <a> 的内容里取纯文字。
+        # 注意只能取 <a> 里面的，不能取整个 <li>——彭康的日期写在 <a> 外面，
+        # 取整块会把 "2026-10-16" 粘到标题前面。
+        t = _A_TITLE.search(attrs)
+        if t:
+            title = html_lib.unescape(t.group(1))
+        else:
+            title = html_lib.unescape(re.sub(r"<[^>]+>", " ", inner))
+        title = re.sub(r"\s+", " ", title).strip().rstrip("…")
+
+        # 日期：一个 li 里可能有多个日期（正文里提到别的日期），取最后一个
+        ds = _DATE.findall(block)
+        if not ds or len(title) < 6:
+            continue
+        y, mo, d = ds[-1]
+        pub = "%s-%02d-%02d" % (y, int(mo), int(d))
+
+        out.append({
+            "category_raw": name,
+            "topic": guess_cat_xsc(title),
+            "title": title,
+            "url": urljoin(page_url, href),
+            "published_at": pub,
+        })
+
+    seen, uniq = set(), []
+    for it in out:
+        if it["url"] in seen:
+            continue
+        seen.add(it["url"])
+        uniq.append(it)
+    return uniq
+
+
+# 书院站点清单。崇实书院的 tzgg.htm 是个导航页、没有列表，暂时接不了。
+SHUYUAN_SITES = [
+    ("彭康书院", "https://pksy.xjtu.edu.cn/tzgg.htm"),
+    ("宗濂书院", "https://zlsy.xjtu.edu.cn/tzgg.htm"),
+    ("启德书院", "https://qdsy.xjtu.edu.cn/qdzx/tzgg.htm"),
+]
+
+
 def parse_list_nanyang(page_url: str) -> list:
     """南洋书院（书院的通知对学生更贴身：宿舍、评优、活动、学代会）。
 
@@ -215,7 +284,8 @@ def parse_list_nanyang(page_url: str) -> list:
         if "weixin" in href:
             continue
         out.append({
-            "category_raw": guess_cat_xsc(title),
+            "category_raw": "南洋书院",
+            "topic": guess_cat_xsc(title),
             "title": title.rstrip("…").strip(),
             "url": urljoin(page_url, href),
             "published_at": pub,
@@ -313,6 +383,9 @@ CAT_MAP = {
     "奖助": "奖助", "就业": "就业", "竞赛": "竞赛", "讲座": "讲座", "其他": "其他",
     # 电信学部/书院 也是这样
     "教务": "教务", "科研": "科研", "生活": "生活",
+    # 书院：子类直接用书院名，所以分类就是它自己
+    "彭康书院": "彭康书院", "宗濂书院": "宗濂书院", "启德书院": "启德书院",
+    "崇实书院": "崇实书院", "南洋书院": "南洋书院",
 }
 
 
@@ -325,7 +398,7 @@ def crawl_detail(item: dict, today: date, source_name: str = "教务处") -> dic
     m = re.search(r"(?is)<title>(.*?)</title>", h)
     if m:
         t = html_lib.unescape(m.group(1)).strip()
-        t = re.sub(r"\s*[-—|]\s*(西安交通大学.*|知心网.*)$", "", t).strip()
+        t = re.sub(r"\s*[-—|]\s*(西安交通大学.*|知心网.*|[\u4e00-\u9fff]{2,8}书院)$", "", t).strip()
         if len(t) > len(item["title"]):
             item["title"] = t
 
@@ -488,6 +561,16 @@ SOURCES = [
     {"name": "华为招聘", "url": HUAWEI_JOB_API, "parser": huawei_jobs, "key": "huawei", "detail": False},
 ]
 
+# 书院批量注册：每加一个书院，只在 SHUYUAN_SITES 里加一行
+_SY_KEYS = {"彭康书院": "pk", "宗濂书院": "zl", "启德书院": "qd", "崇实书院": "cs", "南洋书院": "ny"}
+for _name, _url in SHUYUAN_SITES:
+    if any(s["name"] == _name for s in SOURCES):
+        continue
+    SOURCES.append({
+        "name": _name, "url": _url, "key": _SY_KEYS.get(_name, _name),
+        "parser": (lambda page_url, _n=_name: parse_list_shuyuan(page_url, _n)),
+    })
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -528,6 +611,10 @@ def main() -> int:
         print()
 
     Path(args.out).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    # 另外记一份"这次都抓了哪些源"——有的源今天 0 条（华为秋招收尾、书院没更新），
+    # 它们不在 result 里，但页面上要显示"这个源我接了"。filter_rules 会读这个文件。
+    Path(args.out).with_name("sources.json").write_text(
+        json.dumps([s["name"] for s in SOURCES], ensure_ascii=False, indent=1), encoding="utf-8")
     print("已写入 %s（%d 条，来自 %d 个来源）" % (args.out, len(result), len({x["source"] for x in result})))
     return 0
 
