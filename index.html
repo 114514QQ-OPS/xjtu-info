@@ -273,6 +273,11 @@ footer a{border-bottom:1px solid var(--line-2);}
       <span class="glabel">方向</span>
       <div class="chips" id="dirs"></div>
     </div>
+    <!-- 职能细分：只有点了「职能」才出现 -->
+    <div class="filterline dirline" id="subline" hidden>
+      <span class="glabel">细分</span>
+      <div class="chips" id="subs"></div>
+    </div>
   </div>
 
   <div class="layout">
@@ -309,8 +314,9 @@ footer a{border-bottom:1px solid var(--line-2);}
       healthEl=document.getElementById('health'),
       sNew=document.getElementById('s-new'), sWeek=document.getElementById('s-week'),
       sDate=document.getElementById('s-date'),
-      dirs=document.getElementById('dirs'), dirline=document.getElementById('dirline');
-  var grp='all', cat='all', dir='all', asc=true, items=[], list0=[], shownCount=0, STATS={};
+      dirs=document.getElementById('dirs'), dirline=document.getElementById('dirline'),
+      subs=document.getElementById('subs'), subline=document.getElementById('subline');
+  var grp='all', cat='all', dir='all', sub='all', asc=true, items=[], list0=[], shownCount=0, STATS={};
 
   function esc(v){
     return String(v==null?'':v).replace(/[&<>"]/g,function(c){
@@ -394,6 +400,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     li.dataset.id=it.id||'';
     li.dataset.days=(d===null? 9999 : d);
     li.dataset.dir=it.jobcat||'';
+    li.dataset.sub=it.subcat||'';
     li.dataset.title=it.title+' '+(it.jobcat||'')+' '+(it.job_type||'')+' '+(it.source||'');
     li.innerHTML=
       '<div class="days '+cls(d)+'"><b>'+num+'</b><span>'+lab+'</span></div>'
@@ -428,6 +435,7 @@ footer a{border-bottom:1px solid var(--line-2);}
       var ok=(grp==='all'||grp==='fav'||el.dataset.group===grp)
           && (cat==='all'||el.dataset.cat===cat)
           && (dir==='all'||el.dataset.dir===dir)
+          && (sub==='all'||el.dataset.sub===sub)
           && (!kw || el.textContent.toLowerCase().indexOf(kw)>-1);
       el.style.display=ok?'':'none';
       if(ok) shown++;
@@ -442,7 +450,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     feed.innerHTML='';
     arr.forEach(function(it){ feed.appendChild(renderItem(it)); });
     items=Array.prototype.slice.call(feed.querySelectorAll('.item'));
-    sortItems(); renderDirs(); refresh();
+    sortItems(); renderDirs(); renderSubs(); refresh();
     if(grp==='fav' && !arr.length){
       empty.style.display='block';
       empty.innerHTML='<b>还没有收藏</b>在通知右下角点「☆ 收藏」，收藏的都会出现在这里。';
@@ -530,7 +538,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     var b=e.target.closest('.gtab');
     if(!b) return;
     grp=b.dataset.group;
-    cat='all'; dir='all';           // 换大类时，子类和方向选择都清零
+    cat='all'; dir='all'; sub='all';   // 换大类时，子类、方向、细分都清零
     Array.prototype.forEach.call(groupsEl.children,function(c){
       c.setAttribute('aria-pressed', c===b?'true':'false');
     });
@@ -598,7 +606,40 @@ footer a{border-bottom:1px solid var(--line-2);}
     var b=e.target.closest('.chip');
     if(!b) return;
     dir=b.dataset.dir;
+    sub='all';
     Array.prototype.forEach.call(dirs.children,function(c){
+      c.setAttribute('aria-pressed', c===b?'true':'false');
+    });
+    renderSubs(); refresh();
+  });
+
+  // 职能细分（只有方向选了「职能」才出现）
+  function renderSubs(){
+    if(grp!=='就业' || dir!=='职能'){ subline.hidden=true; return; }
+    subline.hidden=false;
+    var ORDER=['法务','财务','人力行政','采购供应链','品牌市场','其他职能'];
+    var pool=list0.filter(function(x){ return (x.group||'学校通知')==='就业' && (x.jobcat||'')==='职能'; });
+    var map={};
+    pool.forEach(function(x){ var c=x.subcat||'其他职能'; map[c]=(map[c]||0)+1; });
+    var names=Object.keys(map).sort(function(a,b){
+      var ia=ORDER.indexOf(a), ib=ORDER.indexOf(b);
+      if(ia<0) ia=99; if(ib<0) ib=99;
+      return ia-ib;
+    });
+    var html='<button class="chip" aria-pressed="'+(sub==='all')+'" data-sub="all">全部<span class="n">'
+             +pool.length+'</span></button>';
+    names.forEach(function(c){
+      html+='<button class="chip" aria-pressed="'+(sub===c)+'" data-sub="'+esc(c)+'">'
+            +esc(c)+'<span class="n">'+map[c]+'</span></button>';
+    });
+    subs.innerHTML=html;
+  }
+
+  subs.addEventListener('click',function(e){
+    var b=e.target.closest('.chip');
+    if(!b) return;
+    sub=b.dataset.sub;
+    Array.prototype.forEach.call(subs.children,function(c){
       c.setAttribute('aria-pressed', c===b?'true':'false');
     });
     refresh();
