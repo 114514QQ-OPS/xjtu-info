@@ -1,7 +1,7 @@
-// 离线可用的最小 service worker：
+﻿// 离线可用的最小 service worker：
 // 壳（HTML / 图标 / manifest）用 cache-first，数据 feed.json 用 network-first。
 // 这样断网时还能看到上一次的通知，联网后拿到新的。
-const CACHE = 'xjtu-info-v1';
+const CACHE = 'xjtu-info-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png'];
 
 self.addEventListener('install', (e) => {
@@ -47,3 +47,4 @@ self.addEventListener('fetch', (e) => {
     })
   );
 });
+
