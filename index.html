@@ -2,8 +2,17 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>信息差 · 西安交大本科生通知聚合（原型）</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>信息差 · 西安交大本科生通知聚合</title>
+<!-- 加到手机主屏后像个 App：图标、开屏色、全屏无地址栏 -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F6F2EA">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="信息差">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
 <style>
 :root{
   --paper:#F6F2EA;
@@ -669,6 +678,13 @@ footer a{border-bottom:1px solid var(--line-2);}
       empty.innerHTML='<b>数据没加载出来</b>见上面那行提示';
     });
 })();
+
+// 离线可用：把壳和最近一次数据缓存下来，地铁里没信号也能翻
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){ /* 不支持就算了，不影响看 */ });
+  });
+}
 </script>
 </body>
 </html>
