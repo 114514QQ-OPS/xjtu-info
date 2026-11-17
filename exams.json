@@ -1,0 +1,105 @@
+{
+  "updated": "2026-11-17",
+  "note": "人工维护的考试目录。时间是往年规律，每年会变，报名前以官网为准。",
+  "items": [
+    {
+      "id": "cet",
+      "title": "全国大学英语四、六级考试（CET-4 / CET-6）",
+      "category": "语言",
+      "summary": "四级 425 分是多数学校毕业和保研的基本线；六级分数越高，保研和选调越占优势。",
+      "window": "往年：3 月中报名 → 6 月中考试；9 月中报名 → 12 月中考试",
+      "register_url": "https://cet-bm.neea.edu.cn/",
+      "site_url": "https://cet.neea.edu.cn/",
+      "tips": "真题资源：学校图书馆、超星/读秀；听力练习用官网公布的样题音频。",
+      "audience": ["不限"]
+    },
+    {
+      "id": "ncre",
+      "title": "全国计算机等级考试（NCRE）",
+      "category": "计算机",
+      "summary": "二级（C 语言 / Python / Office）较常见。对电子专业不是硬要求，但保研材料里能加分。",
+      "window": "往年：3 月、9 月两次考试；报名一般提前 2–3 个月，各省时间不同",
+      "register_url": "https://ncre-bm.neea.cn/",
+      "site_url": "https://ncre.neea.edu.cn/",
+      "tips": "考试大纲和样题在官网「考试大纲」栏目；题库良莠不齐，以大纲为准。",
+      "audience": ["不限"]
+    },
+    {
+      "id": "ruankao",
+      "title": "软考 · 计算机技术与软件专业技术资格（水平）考试",
+      "category": "计算机",
+      "summary": "中级（软件设计师 / 网络工程师）在求职时比 NCRE 有分量，也是部分国企、事业单位的职称依据。",
+      "window": "往年：5 月下旬、11 月上旬两次；报名由各省软考办安排，提前约 2 个月",
+      "register_url": "https://www.ruankao.org.cn/",
+      "site_url": "https://www.ruankao.org.cn/",
+      "tips": "官方教材 + 历年真题（官网或省软考办有发布）。",
+      "audience": ["不限"]
+    },
+    {
+      "id": "kaoyan",
+      "title": "全国硕士研究生招生考试（考研初试）",
+      "category": "升学",
+      "summary": "电子类常报 0854 电子信息专硕，考试科目与本专业重合度高。",
+      "window": "往年：9 月预报名 → 10 月正式报名 → 12 月下旬初试",
+      "register_url": "https://yz.chsi.com.cn/yzwb/",
+      "site_url": "https://yz.chsi.com.cn/",
+      "tips": "招生简章、专业目录、参考书都在研招网和目标院校研究生院官网。",
+      "audience": ["不限"]
+    },
+    {
+      "id": "tuimian",
+      "title": "推免服务系统（保研）",
+      "category": "升学",
+      "summary": "有推免资格的同学在这里填报志愿、接收复试和待录取通知。",
+      "window": "往年：9 月下旬开放填报 → 10 月中下旬录取结束",
+      "register_url": "https://yz.chsi.com.cn/tm/",
+      "site_url": "https://yz.chsi.com.cn/",
+      "tips": "先确认自己有没有推免资格（看学院排名）；系统开放前各校会先办夏令营和预推免。",
+      "audience": ["不限"]
+    },
+    {
+      "id": "ielts",
+      "title": "雅思 IELTS",
+      "category": "语言",
+      "summary": "出国、部分中外合作项目和暑期交流要用；成绩有效期 2 年。",
+      "window": "全年多次，机考几乎每周都有；建议提前 1–2 个月抢考位",
+      "register_url": "https://ielts.neea.cn/",
+      "site_url": "https://ielts.neea.cn/",
+      "tips": "官方免费备考资源在 ielts.org；真题用剑桥雅思系列。",
+      "audience": ["不限"]
+    },
+    {
+      "id": "toefl",
+      "title": "托福 TOEFL iBT",
+      "category": "语言",
+      "summary": "北美方向常用；成绩有效期 2 年。",
+      "window": "全年多次，考位紧张时提前 2–3 个月",
+      "register_url": "https://toefl.neea.cn/",
+      "site_url": "https://toefl.neea.edu.cn/",
+      "tips": "官网有免费模拟题（TOEFL iBT Free Practice Test）。",
+      "audience": ["不限"]
+    },
+    {
+      "id": "putonghua",
+      "title": "普通话水平测试（PSC）",
+      "category": "语言",
+      "summary": "教师资格认定、部分选调岗位要求二级乙等以上；本校测试站一般每学期组织。",
+      "window": "各校、各省测试站自行安排，通常每学期 1–2 次",
+      "register_url": "https://bm.cltt.org/",
+      "site_url": "https://www.cltt.org/",
+      "tips": "先看本校教务处 / 语委通知，校测比社会考点便宜也好抢。",
+      "audience": ["不限"]
+    },
+    {
+      "id": "ntce",
+      "title": "中小学教师资格考试（NTCE）",
+      "category": "资格",
+      "summary": "想当老师，或考选调时留个备选；笔试 + 面试，普通话需二级乙等以上。",
+      "window": "往年：上半年 1 月报名、3 月笔试；下半年 7 月报名、10 月底笔试",
+      "register_url": "https://ntce.neea.edu.cn/",
+      "site_url": "https://ntce.neea.edu.cn/",
+      "tips": "笔试大纲和科目说明在官网；面试报名要等笔试各科全部合格。",
+      "audience": ["不限"]
+    }
+  ]
+}
