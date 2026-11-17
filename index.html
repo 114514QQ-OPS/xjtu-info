@@ -576,7 +576,7 @@ footer a{border-bottom:1px solid var(--line-2);}
   function renderDirs(){
     if(grp!=='就业'){ dirline.hidden=true; return; }
     dirline.hidden=false;
-    var ORDER=['芯片','算法','嵌入式','硬件','测试','软件','产品','其他'];
+    var ORDER=['芯片','算法','嵌入式','硬件','测试','软件','机械','产品','职能','其他'];
     var inGroup=list0.filter(function(x){ return (x.group||'学校通知')==='就业'; });
     var map={};
     inGroup.forEach(function(x){ var c=x.jobcat||'其他'; map[c]=(map[c]||0)+1; });
