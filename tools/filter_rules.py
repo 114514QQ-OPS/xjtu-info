@@ -539,6 +539,7 @@ def load_exams(near: str | None = None) -> list:
             "category_raw": e.get("category") or "其他",
             "group": "考试",
             "kind": "exam",
+            "professional": bool(e.get("professional")),
             "source": "考试入口",
             "source_type": "考试入口",
             "bucket": "列表",
