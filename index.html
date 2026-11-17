@@ -90,12 +90,6 @@ h1{margin:0;font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1;}
 .filterline{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:11px 0;}
 .filterline[hidden]{display:none;}
 /* 校招流程：一行小字，只在就业大类出现。写死的是常识，不是数据，所以用最轻的样式 */
-.flowline{display:flex;align-items:baseline;gap:14px;padding:0 0 12px;flex-wrap:wrap;}
-.flowline[hidden]{display:none;}
-.flowline .flow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);}
-.flowline .flow span{color:var(--ink);}
-.flowline .flow i{font-style:normal;color:var(--line-2);}
-.flowline .flow em{margin-left:6px;font-style:normal;font-size:11.5px;color:var(--ink-3);}
 .gtab.favtab{margin-left:auto;}
 /* 收藏按钮：放在每条右下角，和「原文」并排 */
 .star{
@@ -170,6 +164,7 @@ h1{margin:0;font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1;}
 .foot .dl{color:var(--ink-2);}
 .foot .dl b{font-family:var(--font-serif);font-weight:400;font-size:12.5px;}
 .src::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--line-2);margin-right:6px;transform:translateY(-1px);}
+.src.nodot::before{display:none;}
 .foot a{margin-left:auto;color:var(--ink-2);border-bottom:1px solid var(--line-2);padding-bottom:1px;}
 .foot .lk{margin-left:auto;display:flex;gap:14px;}
 .foot .lk a{margin-left:0;}
@@ -244,14 +239,13 @@ footer a{border-bottom:1px solid var(--line-2);}
 </head>
 <body>
 
-<div class="demo"><b>真实数据</b> · 每天定时抓 <span id="s-nsrc">—</span> 个来源<span class="srcwrap">：<span id="s-srcs">—</span></span> · <span id="s-bar">—</span></div>
 
 <div class="wrap">
   <header>
     <div class="masthead">
       <div>
         <div class="brand"><i class="mark"></i><h1>大学生信息网</h1></div>
-        <div class="sub">西安交通大学 · 本科生通知聚合　<em>只放标题与链接，每天 08:00 自动更新</em></div>
+        <div class="sub">西安交通大学 · 本科生通知聚合</div>
       </div>
       <div class="headright">
         <div class="stat"><b id="s-new">—</b><span>收录条目</span></div>
@@ -278,28 +272,6 @@ footer a{border-bottom:1px solid var(--line-2);}
     <div class="filterline dirline" id="dirline" hidden>
       <span class="glabel">方向</span>
       <div class="chips" id="dirs"></div>
-    </div>
-    <!-- 校招流程：这是行业常识，不是抓来的数据，所以单独一段、写明「说明」 -->
-    <div class="flowline" id="flowline" hidden>
-      <span class="glabel">流程</span>
-      <div class="flow">
-        <span>网申投递</span><i>›</i>
-        <span>笔试 / 测评</span><i>›</i>
-        <span>技术面 1–2 轮</span><i>›</i>
-        <span>HR 面</span><i>›</i>
-        <span>offer</span>
-        <em>面试是线上还是线下，由 HR 在笔试通过后通知，岗位页不写这一项</em>
-      </div>
-    </div>
-    <!-- 考试：一份人工维护的目录，不是抓来的，写明它和上面那些数据不一样 -->
-    <div class="flowline" id="examline" hidden>
-      <span class="glabel">说明</span>
-      <div class="flow">
-        <span>常设入口</span><i>›</i>
-        <span>人工维护</span><i>›</i>
-        <span>通用的在前，专业类在后</span>
-        <em>报名时间每年会变，这里写的是往年规律，报名前一定以官网为准</em>
-      </div>
     </div>
   </div>
 
@@ -337,8 +309,7 @@ footer a{border-bottom:1px solid var(--line-2);}
       healthEl=document.getElementById('health'),
       sNew=document.getElementById('s-new'), sWeek=document.getElementById('s-week'),
       sDate=document.getElementById('s-date'),
-      dirs=document.getElementById('dirs'), dirline=document.getElementById('dirline'),
-      flowline=document.getElementById('flowline'), examline=document.getElementById('examline');
+      dirs=document.getElementById('dirs'), dirline=document.getElementById('dirline');
   var grp='all', cat='all', dir='all', asc=true, items=[], list0=[], shownCount=0, STATS={};
 
   function esc(v){
@@ -403,8 +374,8 @@ footer a{border-bottom:1px solid var(--line-2);}
     if(it.job_type) tags+='<span class="tag">'+esc(it.job_type)+'</span>';
     if(it.professional) tags+='<span class="tag pro">专业</span>';
     if(d!==null && d>=0 && d<=3) tags+='<span class="tag pin">最容易错过</span>';
-    var dl=isExam ? '时间以官网为准'
-         : (it.deadline ? ('截止 <b>'+esc(it.deadline.slice(5))+'</b>') : '正文未写截止日期');
+    var dl=isExam ? ''
+         : (it.deadline ? ('截止 <b>'+esc(it.deadline.slice(5))+'</b>') : '');
     var tail= isExam
       ? '<span class="lk"><a href="'+esc(it.register_url||it.url)+'" target="_blank" rel="noopener">报名入口 ↗</a>'
         + (it.site_url && it.site_url!==it.register_url
@@ -433,8 +404,8 @@ footer a{border-bottom:1px solid var(--line-2);}
       +  (it.salary ? '<div class="kv"><span class="k">薪资</span><span class="v sal">'+esc(it.salary)+'</span></div>' : '')
       +  (it.require ? '<div class="kv"><span class="k">要求</span><span class="v">'+esc(it.require)+'</span></div>' : '')
       +  extra
-      +  '<div class="foot"><span class="dl">'+dl+'</span>'
-      +  '<span class="src">'+esc(it.source||'')+'</span>'
+      +  '<div class="foot">'+(dl?'<span class="dl">'+dl+'</span>':'')
+      +  '<span class="src'+(dl?'':' nodot')+'">'+esc(it.source||'')+'</span>'
       +  '<button class="star" data-id="'+esc(it.id)+'" aria-pressed="'+(isFav(it.id)?'true':'false')+'">'
       +    (isFav(it.id)?'★ 已收藏':'☆ 收藏')+'</button>'
       +  tail+'</div>'
@@ -603,10 +574,8 @@ footer a{border-bottom:1px solid var(--line-2);}
 
   // 岗位方向（只在「就业」大类里出现）
   function renderDirs(){
-    if(grp!=='就业'){ dirline.hidden=true; flowline.hidden=true; }
-    else { dirline.hidden=false; flowline.hidden=false; }
-    examline.hidden = (grp!=='考试');
-    if(grp!=='就业') return;
+    if(grp!=='就业'){ dirline.hidden=true; return; }
+    dirline.hidden=false;
     var ORDER=['芯片','算法','嵌入式','硬件','测试','软件','产品','其他'];
     var inGroup=list0.filter(function(x){ return (x.group||'学校通知')==='就业'; });
     var map={};
