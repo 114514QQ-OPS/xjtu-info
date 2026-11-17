@@ -404,6 +404,11 @@ def process(raw: list, grade: str = "大一", today: date | None = None, input_p
 
     result.sort(key=sk)
 
+    # 「考试」大类不来自爬虫，是一份人工维护的目录（exams.json）：
+    # 报名入口、官网、往年时间规律。它们不参与打分和筛选，直接进列表。
+    exams = load_exams(input_path)
+    result.extend(exams)
+
     stats = {
         "today": today.isoformat(),
         "grade": grade,
@@ -499,6 +504,50 @@ def load(path: str) -> list:
     return data if isinstance(data, list) else data.get("items", [])
 
 
+def load_exams(near: str | None = None) -> list:
+    """读人工维护的考试目录。找不到文件就返回空列表，不影响主流程。"""
+    cands = []
+    if near:
+        cands.append(Path(near).resolve().parent / "exams.json")
+    cands.append(Path(__file__).resolve().parent.parent / "exams.json")
+    cands.append(Path.cwd() / "exams.json")
+    path = next((p for p in cands if p.exists()), None)
+    if path is None:
+        return []
+
+    out = []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:                      # noqa: BLE001 —— 目录坏了就当没有，不让整条流水线挂
+        return []
+    for e in (data.get("items") if isinstance(data, dict) else data) or []:
+        if not isinstance(e, dict) or not e.get("title"):
+            continue
+        out.append({
+            "id": e.get("id") or e["title"],
+            "title": e["title"],
+            "url": e.get("register_url") or e.get("site_url") or "",
+            "register_url": e.get("register_url"),
+            "site_url": e.get("site_url"),
+            "published_at": None,
+            "deadline": None,
+            "summary": e.get("summary"),
+            "window": e.get("window"),
+            "tips": e.get("tips"),
+            "audience": e.get("audience") or ["不限"],
+            "category": e.get("category") or "其他",
+            "category_raw": e.get("category") or "其他",
+            "group": "考试",
+            "kind": "exam",
+            "source": "考试入口",
+            "source_type": "考试入口",
+            "bucket": "列表",
+            "score": 10,
+            "days_left": None,
+            "scores": {"relevance": 3, "action": 3, "urgency": 1, "authority": 3},
+            "reason": "常设考试入口（人工维护，不参与筛选）",
+        })
+    return out
 def main() -> int:
     try:
         sys.stdout.reconfigure(encoding="utf-8")
