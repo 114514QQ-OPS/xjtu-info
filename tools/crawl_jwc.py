@@ -501,6 +501,26 @@ JOB_CAT_RULES = [
 ]
 
 
+JOB_SUB_RULES = [
+    ("法务", ["律师", "法务", "专利", "合规"]),
+    ("财务", ["财务", "会计", "审计", "税务", "投资", "资金", "成本"]),
+    ("人力行政", ["人力", "hr", "招聘", "行政", "组织", "档案", "党群", "物业", "综合管理",
+                  "培训", "薪酬", "员工"]),
+    ("采购供应链", ["采购", "供应链", "物流", "物资", "物控", "调度", "资材", "仓储", "关务"]),
+    ("品牌市场", ["品牌", "市场", "营销", "公关", "销售", "商务", "运营", "设计", "传播"]),
+]
+
+
+def guess_job_sub(title: str) -> str:
+    """只在「职能」大类下用：把法务/财务/人力行政/采购供应链/品牌市场拆开。"""
+    t = (title or "").lower()
+    for name, words in JOB_SUB_RULES:
+        for w in words:
+            if w in t:
+                return name
+    return "其他职能"
+
+
 def guess_job_cat(title: str, fam: str = "") -> str:
     """把岗位归到 9 个方向之一。命中不了就 '其他'。规则顺序即优先级。"""
     t = (title or "").lower()
@@ -770,7 +790,89 @@ def byd_jobs(_url=None, max_items: int = 20) -> list:
     return [byd_item(j) for j in rows][:max_items]
 
 
-# ---------------- Moka 系公司（中兴 / 大疆 / 宁德时代） ----------------
+# ---------------- 腾讯校招（join.qq.com，匿名 JSON 接口） ----------------
+TENCENT_API = "https://join.qq.com/api/v1/position/searchPosition"
+TENCENT_DETAIL = ("https://join.qq.com/api/v1/jobDetails/getJobDetailsByPostId?postId=%s")
+
+
+def tencent_item(p: dict, detail: dict) -> dict:
+    title = (p.get("positionTitle") or "").strip()
+    cities = "·".join((p.get("workCities") or "").split()[:4])
+    proj = (p.get("recruitLabelName") or p.get("projectName") or "").strip()
+    desc = to_text(detail.get("desc") or "")
+    req = pick_requirement(to_text(detail.get("request") or ""))
+    head = " · ".join([x for x in (cities, proj) if x])
+    body = desc[:300]
+    summary = ((head + "。" + body) if (head and body) else (head or body))[:160]
+    return {
+        "title": title,
+        "url": "https://join.qq.com/postDetail.html?postId=%s" % (p.get("postId") or ""),
+        "published_at": None,          # 列表接口不带发布时间
+        "deadline": None,              # 也不带截止日期
+        "summary": summary,
+        "body_text": body,
+        "require": req,
+        "salary": None,
+        "audience": ["不限"],
+        "category": "腾讯",
+        "category_raw": "腾讯",
+        "group": "就业",
+        "firm": "腾讯",
+        "jobcat": guess_job_cat(title, ""),
+        "source": "腾讯招聘",
+        "source_type": "腾讯招聘",
+        "job_type": proj or "校招",
+        "job_dept": proj or None,
+    }
+
+
+def tencent_jobs(_url=None, max_items: int = 20) -> list:
+    """腾讯校招（实测 881 条在招）。列表一次 100 条，详情另外拉 JD。"""
+    out, seen = [], set()
+    page = 1
+    while len(out) < max_items and page <= 10:
+        body = {"keyword": "", "pageIndex": page, "pageSize": 100, "workCountryType": 1,
+                "bgList": [], "workCityList": [], "recruitCityList": [], "positionFidList": []}
+        try:
+            data = json.loads(fetch_post_json(
+                TENCENT_API, body,
+                referer="https://join.qq.com/post.html", origin="https://join.qq.com"))
+        except Exception as e:
+            print("  [腾讯招聘] 接口失败 %s: %s" % (type(e).__name__, e))
+            return out
+        block = (data.get("data") or {})
+        rows = block.get("positionList") or []
+        if not rows:
+            break
+        if page == 1:
+            print("  [腾讯招聘] 在招 %s 条，取前 %d 条" % (block.get("count"), min(len(rows), max_items)))
+        for p in rows:
+            pid = str(p.get("postId") or "")
+            if not pid or pid in seen:
+                continue
+            seen.add(pid)
+            out.append(p)
+            if len(out) >= max_items:
+                break
+        page += 1
+
+    items = []
+    for p in out[:max_items]:
+        detail = {}
+        try:
+            raw = urllib.request.urlopen(
+                urllib.request.Request(TENCENT_DETAIL % p.get("postId"), headers={
+                    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                                   "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")}),
+                timeout=20, context=CTX).read().decode("utf-8", "ignore")
+            detail = (json.loads(raw).get("data") or {})
+        except Exception:
+            detail = {}
+        items.append(tencent_item(p, detail))
+    return items
+
+
+
 # 这三家的校招站都是 Moka 建的，接口一样、返回体都加密，
 # 所以解密和翻页都放在 moka.py 里，这里只写每家门口的 orgId/siteId。
 MOKA_SITES = [
@@ -843,6 +945,175 @@ def moka_jobs(firm: str, portal: str, org: str, site: str, max_items: int = 20):
 
 
 # 站点注册表：以后加一个新来源，就在这里加一行，别的都不用动
+# ---------------- 美团校招（zhaopin.meituan.com，匿名 JSON 接口） ----------------
+MEITUAN_API = "https://zhaopin.meituan.com/api/official/job/getJobList"
+MEITUAN_TYPE = {"1": "校招", "2": "实习"}
+
+
+def meituan_item(j: dict) -> dict:
+    title = (j.get("name") or "").strip()
+    cities = [c.get("name") for c in (j.get("cityList") or []) if c.get("name")]
+    city = "·".join(cities[:3])
+    fam = (j.get("jobFamily") or "").strip()
+    grp = (j.get("jobFamilyGroup") or "").strip()
+    duty = to_text(j.get("jobDuty") or j.get("desc") or "")
+    req = pick_requirement(to_text(j.get("jobRequirement") or ""))
+    head = " · ".join([x for x in (city, fam, grp) if x])
+    body = duty[:300]
+    summary = ((head + "。" + body) if (head and body) else (head or body))[:160]
+    jt = MEITUAN_TYPE.get(str(j.get("jobType")), "校招")
+    return {
+        "title": title,
+        "url": "https://zhaopin.meituan.com/web/position/detail?jobUnionId=%s" % (j.get("jobUnionId") or ""),
+        "published_at": (j.get("firstPostTime") or "")[:10] or None,
+        "deadline": (j.get("expiredTime") or "")[:10] or None,
+        "summary": summary,
+        "body_text": body,
+        "require": req,
+        "salary": None,
+        "audience": ["不限"],
+        "category": "美团",
+        "category_raw": "美团",
+        "group": "就业",
+        "firm": "美团",
+        "jobcat": guess_job_cat(title, fam),
+        "source": "美团招聘",
+        "source_type": "美团招聘",
+        "job_type": jt,
+        "job_dept": fam or None,
+    }
+
+
+def meituan_jobs(_url=None, max_items: int = 20) -> list:
+    """美团校招+实习（实测 572 条）。分页参数必须嵌在 page 对象里。"""
+    out, seen, page = [], set(), 1
+    while len(out) < max_items and page <= 10:
+        body = {"page": {"pageNo": page, "pageSize": 50},
+                "jobType": [{"code": "1"}, {"code": "2"}]}
+        try:
+            data = json.loads(fetch_post_json(
+                MEITUAN_API, body,
+                referer="https://zhaopin.meituan.com/web/campus",
+                origin="https://zhaopin.meituan.com"))
+        except Exception as e:
+            print("  [美团招聘] 接口失败 %s: %s" % (type(e).__name__, e))
+            return out
+        block = data.get("data") or {}
+        rows = block.get("list") or []
+        if not rows:
+            break
+        if page == 1:
+            print("  [美团招聘] 校招+实习 %s 条，取前 %d 条" % (
+                (block.get("page") or {}).get("totalCount"), min(len(rows), max_items)))
+        for j in rows:
+            jid = str(j.get("jobUnionId") or "")
+            if not jid or jid in seen:
+                continue
+            seen.add(jid)
+            out.append(j)
+            if len(out) >= max_items:
+                break
+        page += 1
+    return [meituan_item(j) for j in out[:max_items]]
+
+
+# ---------------- 字节跳动校招（jobs.bytedance.com，需先取 CSRF token） ----------------
+BYTE_API = "https://jobs.bytedance.com/api/v1/search/job/posts"
+BYTE_CSRF = "https://jobs.bytedance.com/api/v1/csrf/token"
+BYTE_HEADERS = {
+    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                   "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"),
+    "Content-Type": "application/json",
+    "Accept": "application/json, text/plain, */*",
+    "website-path": "campus",
+    "Portal-Channel": "campus",
+    "Portal-Platform": "pc",
+    "Origin": "https://jobs.bytedance.com",
+    "Referer": "https://jobs.bytedance.com/campus/position",
+}
+
+
+def _ms_to_date(v):
+    """字节的时间是毫秒时间戳。"""
+    try:
+        return date.fromtimestamp(int(v) / 1000).isoformat()
+    except Exception:                      # noqa: BLE001
+        return None
+
+
+def byte_item(j: dict) -> dict:
+    title = (j.get("title") or "").strip()
+    cities = [c.get("name") for c in (j.get("city_list") or []) if c.get("name")]
+    if not cities:
+        ci = j.get("city_info") or {}
+        if ci.get("name"):
+            cities = [ci["name"]]
+    city = "·".join(cities[:3])
+    info = j.get("job_post_info") or {}
+    desc = to_text(j.get("description") or "")
+    req = pick_requirement(to_text(j.get("requirement") or ""))
+    rt = ((j.get("recruit_type") or {}).get("name") or "").strip()
+    head = " · ".join([x for x in (city, rt) if x])
+    body = desc[:300]
+    summary = ((head + "。" + body) if (head and body) else (head or body))[:160]
+    return {
+        "title": title,
+        "url": "https://jobs.bytedance.com/campus/position/%s/detail" % (j.get("id") or ""),
+        "published_at": _ms_to_date(j.get("publish_time")),
+        "deadline": _ms_to_date(info.get("expiry_time")),
+        "summary": summary,
+        "body_text": body,
+        "require": req,
+        "salary": None,
+        "audience": ["不限"],
+        "category": "字节跳动",
+        "category_raw": "字节跳动",
+        "group": "就业",
+        "firm": "字节跳动",
+        "jobcat": guess_job_cat(title, (j.get("job_category") or {}).get("name") if isinstance(j.get("job_category"), dict) else ""),
+        "source": "字节招聘",
+        "source_type": "字节招聘",
+        "job_type": rt or "校招",
+        "job_dept": rt or None,
+    }
+
+
+def bytedance_jobs(_url=None, max_items: int = 20) -> list:
+    """字节校招（campus 域，实测 6000+ 条）。缺 x-csrf-token 会 405。"""
+    import http.cookiejar
+    cj = http.cookiejar.CookieJar()
+    op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+    try:
+        tok = json.loads(op.open(urllib.request.Request(
+            BYTE_CSRF, data=b"{}", headers=BYTE_HEADERS, method="POST"), timeout=25
+        ).read())["data"]["token"]
+    except Exception as e:
+        print("  [字节招聘] 取 csrf 失败 %s: %s" % (type(e).__name__, e))
+        return []
+    h = dict(BYTE_HEADERS)
+    h["x-csrf-token"] = tok
+
+    out, offset = [], 0
+    while len(out) < max_items and offset < 400:
+        body = json.dumps({"keyword": "", "limit": 50, "offset": offset,
+                           "portal_type": 3}).encode("utf-8")
+        try:
+            d = json.loads(op.open(urllib.request.Request(
+                BYTE_API, data=body, headers=h, method="POST"), timeout=30
+            ).read())["data"]
+        except Exception as e:
+            print("  [字节招聘] 列表失败 %s: %s" % (type(e).__name__, e))
+            break
+        rows = d.get("job_post_list") or []
+        if not rows:
+            break
+        if offset == 0:
+            print("  [字节招聘] 校招 %s 条，取前 %d 条" % (d.get("count"), min(len(rows), max_items)))
+        out.extend(rows)
+        offset += len(rows)
+    return [byte_item(j) for j in out[:max_items]]
+
+
 SOURCES = [
     {"name": "教务处", "url": LIST_URL, "parser": parse_list, "key": "jwc"},
     {"name": "学生处", "url": "https://xsc.xjtu.edu.cn/xgdt/tzgg.htm", "parser": parse_list_xsc, "key": "xsc"},
@@ -851,6 +1122,9 @@ SOURCES = [
     {"name": "华为招聘", "url": HUAWEI_JOB_API, "parser": huawei_jobs, "key": "huawei", "detail": False},
     {"name": "小米招聘", "url": XIAOMI_JOB_API, "parser": xiaomi_jobs, "key": "xiaomi", "detail": False},
     {"name": "比亚迪招聘", "url": BYD_API, "parser": byd_jobs, "key": "byd", "detail": False},
+    {"name": "腾讯招聘", "url": TENCENT_API, "parser": tencent_jobs, "key": "tencent", "detail": False},
+    {"name": "美团招聘", "url": MEITUAN_API, "parser": meituan_jobs, "key": "meituan", "detail": False},
+    {"name": "字节招聘", "url": BYTE_API, "parser": bytedance_jobs, "key": "byte", "detail": False},
 ]
 
 # Moka 系公司：一行一家（名字, 门户, orgId, siteId）
@@ -908,6 +1182,8 @@ def main() -> int:
                 print("  [%s %d] 失败 %s: %s" % (src["name"], i, type(e).__name__, it["title"][:20]))
                 continue
             seen_url.add(it["url"])
+            if it.get("jobcat") == "职能":
+                it["subcat"] = guess_job_sub(it.get("title", ""))
             result.append(it)
             dl = it["deadline"] or "无截止日期"
             print("  [%s %d] %s  %-12s %s" % (src["name"], i, it["published_at"], dl, it["title"][:34]))
