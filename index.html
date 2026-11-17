@@ -145,6 +145,7 @@ h1{margin:0;font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1;}
 .tag.cat{background:var(--paper-2);color:var(--ink);border-color:var(--line-2);font-weight:600;}
 .tag.pin{color:var(--accent);border-color:#E0B9B2;background:var(--accent-bg);}
 .tag.job{color:var(--ink);background:#EDF1EC;border-color:#CFD8CB;font-weight:600;}
+.tag.pro{color:var(--accent);border-color:#D9B7AF;background:#FBF0EC;font-weight:600;}
 .item h2{
   margin:0 0 6px;font-size:16.5px;font-weight:650;line-height:1.45;letter-spacing:-.005em;
 }
@@ -282,7 +283,8 @@ footer a{border-bottom:1px solid var(--line-2);}
       <span class="glabel">说明</span>
       <div class="flow">
         <span>常设入口</span><i>›</i>
-        <span>人工维护</span>
+        <span>人工维护</span><i>›</i>
+        <span>通用的在前，专业类在后</span>
         <em>报名时间每年会变，这里写的是往年规律，报名前一定以官网为准</em>
       </div>
     </div>
@@ -391,6 +393,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     if(it.topic && it.topic!=='其他') tags+='<span class="tag">'+esc(it.topic)+'</span>';
     if(it.jobcat) tags+='<span class="tag job">'+esc(it.jobcat)+'</span>';
     if(it.job_type) tags+='<span class="tag">'+esc(it.job_type)+'</span>';
+    if(it.professional) tags+='<span class="tag pro">专业</span>';
     if(d!==null && d>=0 && d<=3) tags+='<span class="tag pin">最容易错过</span>';
     var dl=isExam ? '时间以官网为准'
          : (it.deadline ? ('截止 <b>'+esc(it.deadline.slice(5))+'</b>') : '正文未写截止日期');
@@ -502,7 +505,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     var ORDER=['教务','奖助','竞赛','科研','就业','讲座','招聘',
                '彭康书院','宗濂书院','启德书院','崇实书院','南洋书院',
                '华为','小米','比亚迪','中兴通讯','大疆','宁德时代',
-               '语言','计算机','升学','资格'];
+               '通用','电子','计算机'];
     var inGroup=list.filter(function(x){ return grp==='all' || grp==='fav' || (x.group||'学校通知')===grp; });
     var map={};
     inGroup.forEach(function(x){ var c=x.category||'其他'; map[c]=(map[c]||0)+1; });
