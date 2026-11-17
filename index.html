@@ -330,7 +330,7 @@ footer a{border-bottom:1px solid var(--line-2);}
 
   <footer>
     <span>信息差 · 校园信息聚合原型</span>
-    <span>仅聚合标题、摘要与原文链接 · 每日 08:00 更新 · <a href="#">数据来源说明</a></span>
+    <span>仅聚合标题、摘要与原文链接 · 每日 08:00 更新 · <a href="offline.html" download="xjtu-info.html">下载离线版</a> · <a href="#">数据来源说明</a></span>
   </footer>
 </div>
 
@@ -644,8 +644,12 @@ footer a{border-bottom:1px solid var(--line-2);}
     asc=!asc; sortItems();
   });
 
-  fetch('feed.json',{cache:'no-store'})
-    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+  // 单文件离线版会把数据直接内联进 window.__FEED__，这时不发请求
+  var src = window.__FEED__
+    ? Promise.resolve(window.__FEED__)
+    : fetch('feed.json',{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+
+  src
     .then(function(data){
       // 只把「头条 / 列表」画出来；「归档」留在 feed.json 里备查，不参与刷屏
       var list=(data.items||[]).filter(function(x){
@@ -666,6 +670,11 @@ footer a{border-bottom:1px solid var(--line-2);}
       var nsrc=document.getElementById('s-nsrc'), ssrc=document.getElementById('s-srcs');
       if(nsrc) nsrc.textContent=srcs.length;
       if(ssrc) ssrc.textContent=srcs.map(function(x){return x.name;}).join(' / ');
+      // 单文件离线版：数据是内联的快照，明确写出来，别让人以为是每天更新的
+      if(window.__FEED__){
+        var b=document.querySelector('.demo'), td=((data.stats&&data.stats.today)||'');
+        if(b) b.innerHTML='<b>离线版</b> · 数据截至 '+esc(td||'—')+' · 这份不会自动更新，要看新的用在线版';
+      }
       paint();
     })
     .catch(function(err){
