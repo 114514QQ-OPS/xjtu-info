@@ -5,7 +5,7 @@
     "input": 179,
     "dropped": 65,
     "headline": 3,
-    "list": 106,
+    "list": 115,
     "archive": 5,
     "sources": [
       {
@@ -76,7 +76,8 @@
     ],
     "groups": {
       "学校通知": 14,
-      "就业": 100
+      "就业": 100,
+      "考试": 9
     },
     "firms": [
       "华为",
@@ -916,6 +917,40 @@
       "summary": "蕉城区。一、岗位职责描述： 1.安全体系管理类：负责统筹集团环境健康与安全合规性工作及体系的建立、运行与对接，支持政府检查和客户审核；同时负责风险评估、安全政策制定及培训监督，并完善应急管理体系； 2.安全技术管理类：负责锂电消防及安全领域",
       "body_text": "一、岗位职责描述： 1.安全体系管理类：负责统筹集团环境健康与安全合规性工作及体系的建立、运行与对接，支持政府检查和客户审核；同时负责风险评估、安全政策制定及培训监督，并完善应急管理体系； 2.安全技术管理类：负责锂电消防及安全领域的国标、行标建设及评审管理，协同标委会推进标准业务；或负责设备安全标准的设计确认、一致性联调，确保国内外设备合规性与技术要求落实； 3.现场安全管理类：负责集团现场安全管理和隐患排查整改，推动事故调查与追踪，确保消防安全、设备安全、化学品安全及施工安全审批；或开展前沿科技风险研究，对接项目组，确保项目风险可控； 4.海外项目管理类：负责海外非电芯业务合规及安全风险评估，推动安全标准建设和执行落地，以及过程审核及辅导。 二、岗位要求： 1.学历要求：硕士及以上学历； 2.专业要求：安全、消防等相关专业，如安全科学与工程、安全工程、机械工程、消防工程、环境工程、电气工程及其自动化等； 3.英语听说读写要求：英语流利，听说读写良好，能流利地沟通交流； 4.软性素质要求：有较强的沟通协同能力、人际敏锐度、逻辑思维和团队合作意识，执行力强。",
       "require": "1.学历要求：硕士及以上学历； 2.专业要求：安全、消防等相关专业，如安全科学与工程、安全工程、机械工程、消防工程、环境工程、电气工程及其自动化等； 3.英语听…",
+      "salary": null,
+      "audience": [
+        "不限"
+      ],
+      "category": "宁德时代",
+      "category_raw": "宁德时代",
+      "group": "就业",
+      "firm": "宁德时代",
+      "jobcat": "其他",
+      "source": "宁德时代招聘",
+      "source_type": "宁德时代招聘",
+      "job_type": "校招",
+      "job_dept": null,
+      "id": "c676b9051b8263fa",
+      "scores": {
+        "relevance": 2,
+        "action": 2,
+        "urgency": 0,
+        "authority": 2
+      },
+      "score": 6,
+      "deadline_parsed": null,
+      "days_left": null,
+      "bucket": "列表",
+      "reason": "6/12 分"
+    },
+    {
+      "title": "电池材料实验技术员",
+      "url": "https://talent.catl.com/campus-recruitment/catlhr/148948#/job/b20c7941-7bc1-4b1b-b88d-164178e8a622",
+      "published_at": "2026-11-14",
+      "deadline": null,
+      "summary": "厦门市。一、岗位职责描述： 1.开展正负极、电解液物化测试，完成极片裁切称量，扣式 / 叠片小电池组装封装（手套箱操作），执行充放电、循环、倍率、高低温等电化学测试。 2.做好样品标识交接、原始实验记录，完成数据初步整理、计算与基础数据处理",
+      "body_text": "一、岗位职责描述： 1.开展正负极、电解液物化测试，完成极片裁切称量，扣式 / 叠片小电池组装封装（手套箱操作），执行充放电、循环、倍率、高低温等电化学测试。 2.做好样品标识交接、原始实验记录，完成数据初步整理、计算与基础数据处理；设备点检维护，落实区域 5S 管理。 3.遵守安全规范，负责危化品及实验废弃物管理，设备 / 样品 / 数据异常及时上报工程师。 4.对接生产、质量部门，做好跨部门协同。 二、岗位要求 1.材料、电化学、新能源、化工等相关专业，本科及以上学历； 2.了解锂电池基础原理，有扣式 / 软包电池组装、电化学测试实操经验者优先； 3.能够规范填写实验记录，具备基础的数据处理、图表绘制能力； 4.熟悉手套箱、电池测试仪等设备操作，具备实验室安全意识，了解危化品管理要求； 5.工作严谨细致，执行力强，具备良好沟通能力与团队协作意识。",
+      "require": "1.材料、电化学、新能源、化工等相关专业，本科及以上学历； 2.了解锂电池基础原理，有扣式 / 软包电池组装、电化学测试实操经验者优先； 3.能够规范填写实验记…",
       "salary": null,
       "audience": [
         "不限"
@@ -2347,40 +2382,6 @@
       "group": "就业",
       "firm": "宁德时代",
       "jobcat": "其他",
-      "source": "宁德时代招聘",
-      "source_type": "宁德时代招聘",
-      "job_type": "校招",
-      "job_dept": null,
-      "id": "c676b9051b8263fa",
-      "scores": {
-        "relevance": 2,
-        "action": 2,
-        "urgency": 0,
-        "authority": 2
-      },
-      "score": 6,
-      "deadline_parsed": null,
-      "days_left": null,
-      "bucket": "列表",
-      "reason": "6/12 分"
-    },
-    {
-      "title": "国内乘用车销售代表",
-      "url": "https://talent.catl.com/campus-recruitment/catlhr/148948#/job/97463ba4-4e7a-42fc-95ed-7a5ca1160faa",
-      "published_at": "2026-10-19",
-      "deadline": null,
-      "summary": "蕉城区。一、岗位职责描述： 1. 客户开发与维护 ：协助销售团队负责人开拓新客户资源，维护现有客户关系； 2. 负责客户全生命周期管理，包括但不限于销售对账、合同签订、回款跟踪； 3. 需求对接及客户满意度提升，确保达成公司在客户端的年度销",
-      "body_text": "一、岗位职责描述： 1. 客户开发与维护 ：协助销售团队负责人开拓新客户资源，维护现有客户关系； 2. 负责客户全生命周期管理，包括但不限于销售对账、合同签订、回款跟踪； 3. 需求对接及客户满意度提升，确保达成公司在客户端的年度销售目标及战略任务； 4. 跨部门协同 ：作为客户需求对接窗口，协同销售管理、工程技术、项目管理、 质量及生产等部门高效推动客户需求落地，确保内外部信息传递的准确性与及时性； 5. 团队协作与战略执行： 作为销售团队核心成员，与公司战略项目组（SPP）紧密协作，承担补位职责，保障团队目标达成；参与制定产品线发展规划，协助团队实现销售业绩突破。 二、岗位要求： 1. 本科及以上学历； 2. 市场营销、理工类专业； 3. 英语听说读写能力优秀； 4. 高度自我驱动力，以目标为导向，能适应快节奏工作环境； 卓越的沟通协调能力及跨团队协作意识； 具备快速学习能力与持续改进的反思精神； 5. 拥有大型活动策划、辩论赛、公开演讲或主持经验者优先考虑； 6. 能适应短期的（国内）出差。",
-      "require": "1. 本科及以上学历； 2. 市场营销、理工类专业； 3. 英语听说读写能力优秀； 4. 高度自我驱动力，以目标为导向，能适应快节奏工作环境； 卓越的沟通协调能…",
-      "salary": null,
-      "audience": [
-        "不限"
-      ],
-      "category": "宁德时代",
-      "category_raw": "宁德时代",
-      "group": "就业",
-      "firm": "宁德时代",
-      "jobcat": "产品",
       "source": "宁德时代招聘",
       "source_type": "宁德时代招聘",
       "job_type": "校招",
@@ -3886,6 +3887,285 @@
       "days_left": -1,
       "bucket": "归档",
       "reason": "已过截止日期"
+    },
+    {
+      "id": "cet",
+      "title": "全国大学英语四、六级考试（CET-4 / CET-6）",
+      "url": "https://cet-bm.neea.edu.cn/",
+      "register_url": "https://cet-bm.neea.edu.cn/",
+      "site_url": "https://cet.neea.edu.cn/",
+      "published_at": null,
+      "deadline": null,
+      "summary": "四级 425 分是多数学校毕业和保研的基本线；六级分数越高，保研和选调越占优势。",
+      "window": "往年：3 月中报名 → 6 月中考试；9 月中报名 → 12 月中考试",
+      "tips": "真题资源：学校图书馆、超星/读秀；听力练习用官网公布的样题音频。",
+      "audience": [
+        "不限"
+      ],
+      "category": "语言",
+      "category_raw": "语言",
+      "group": "考试",
+      "kind": "exam",
+      "source": "考试入口",
+      "source_type": "考试入口",
+      "bucket": "列表",
+      "score": 10,
+      "days_left": null,
+      "scores": {
+        "relevance": 3,
+        "action": 3,
+        "urgency": 1,
+        "authority": 3
+      },
+      "reason": "常设考试入口（人工维护，不参与筛选）"
+    },
+    {
+      "id": "ncre",
+      "title": "全国计算机等级考试（NCRE）",
+      "url": "https://ncre-bm.neea.cn/",
+      "register_url": "https://ncre-bm.neea.cn/",
+      "site_url": "https://ncre.neea.edu.cn/",
+      "published_at": null,
+      "deadline": null,
+      "summary": "二级（C 语言 / Python / Office）较常见。对电子专业不是硬要求，但保研材料里能加分。",
+      "window": "往年：3 月、9 月两次考试；报名一般提前 2–3 个月，各省时间不同",
+      "tips": "考试大纲和样题在官网「考试大纲」栏目；题库良莠不齐，以大纲为准。",
+      "audience": [
+        "不限"
+      ],
+      "category": "计算机",
+      "category_raw": "计算机",
+      "group": "考试",
+      "kind": "exam",
+      "source": "考试入口",
+      "source_type": "考试入口",
+      "bucket": "列表",
+      "score": 10,
+      "days_left": null,
+      "scores": {
+        "relevance": 3,
+        "action": 3,
+        "urgency": 1,
+        "authority": 3
+      },
+      "reason": "常设考试入口（人工维护，不参与筛选）"
+    },
+    {
+      "id": "ruankao",
+      "title": "软考 · 计算机技术与软件专业技术资格（水平）考试",
+      "url": "https://www.ruankao.org.cn/",
+      "register_url": "https://www.ruankao.org.cn/",
+      "site_url": "https://www.ruankao.org.cn/",
+      "published_at": null,
+      "deadline": null,
+      "summary": "中级（软件设计师 / 网络工程师）在求职时比 NCRE 有分量，也是部分国企、事业单位的职称依据。",
+      "window": "往年：5 月下旬、11 月上旬两次；报名由各省软考办安排，提前约 2 个月",
+      "tips": "官方教材 + 历年真题（官网或省软考办有发布）。",
+      "audience": [
+        "不限"
+      ],
+      "category": "计算机",
+      "category_raw": "计算机",
+      "group": "考试",
+      "kind": "exam",
+      "source": "考试入口",
+      "source_type": "考试入口",
+      "bucket": "列表",
+      "score": 10,
+      "days_left": null,
+      "scores": {
+        "relevance": 3,
+        "action": 3,
+        "urgency": 1,
+        "authority": 3
+      },
+      "reason": "常设考试入口（人工维护，不参与筛选）"
+    },
+    {
+      "id": "kaoyan",
+      "title": "全国硕士研究生招生考试（考研初试）",
+      "url": "https://yz.chsi.com.cn/yzwb/",
+      "register_url": "https://yz.chsi.com.cn/yzwb/",
+      "site_url": "https://yz.chsi.com.cn/",
+      "published_at": null,
+      "deadline": null,
+      "summary": "电子类常报 0854 电子信息专硕，考试科目与本专业重合度高。",
+      "window": "往年：9 月预报名 → 10 月正式报名 → 12 月下旬初试",
+      "tips": "招生简章、专业目录、参考书都在研招网和目标院校研究生院官网。",
+      "audience": [
+        "不限"
+      ],
+      "category": "升学",
+      "category_raw": "升学",
+      "group": "考试",
+      "kind": "exam",
+      "source": "考试入口",
+      "source_type": "考试入口",
+      "bucket": "列表",
+      "score": 10,
+      "days_left": null,
+      "scores": {
+        "relevance": 3,
+        "action": 3,
+        "urgency": 1,
+        "authority": 3
+      },
+      "reason": "常设考试入口（人工维护，不参与筛选）"
+    },
+    {
+      "id": "tuimian",
+      "title": "推免服务系统（保研）",
+      "url": "https://yz.chsi.com.cn/tm/",
+      "register_url": "https://yz.chsi.com.cn/tm/",
+      "site_url": "https://yz.chsi.com.cn/",
+      "published_at": null,
+      "deadline": null,
+      "summary": "有推免资格的同学在这里填报志愿、接收复试和待录取通知。",
+      "window": "往年：9 月下旬开放填报 → 10 月中下旬录取结束",
+      "tips": "先确认自己有没有推免资格（看学院排名）；系统开放前各校会先办夏令营和预推免。",
+      "audience": [
+        "不限"
+      ],
+      "category": "升学",
+      "category_raw": "升学",
+      "group": "考试",
+      "kind": "exam",
+      "source": "考试入口",
+      "source_type": "考试入口",
+      "bucket": "列表",
+      "score": 10,
+      "days_left": null,
+      "scores": {
+        "relevance": 3,
+        "action": 3,
+        "urgency": 1,
+        "authority": 3
+      },
+      "reason": "常设考试入口（人工维护，不参与筛选）"
+    },
+    {
+      "id": "ielts",
+      "title": "雅思 IELTS",
+      "url": "https://ielts.neea.cn/",
+      "register_url": "https://ielts.neea.cn/",
+      "site_url": "https://ielts.neea.cn/",
+      "published_at": null,
+      "deadline": null,
+      "summary": "出国、部分中外合作项目和暑期交流要用；成绩有效期 2 年。",
+      "window": "全年多次，机考几乎每周都有；建议提前 1–2 个月抢考位",
+      "tips": "官方免费备考资源在 ielts.org；真题用剑桥雅思系列。",
+      "audience": [
+        "不限"
+      ],
+      "category": "语言",
+      "category_raw": "语言",
+      "group": "考试",
+      "kind": "exam",
+      "source": "考试入口",
+      "source_type": "考试入口",
+      "bucket": "列表",
+      "score": 10,
+      "days_left": null,
+      "scores": {
+        "relevance": 3,
+        "action": 3,
+        "urgency": 1,
+        "authority": 3
+      },
+      "reason": "常设考试入口（人工维护，不参与筛选）"
+    },
+    {
+      "id": "toefl",
+      "title": "托福 TOEFL iBT",
+      "url": "https://toefl.neea.cn/",
+      "register_url": "https://toefl.neea.cn/",
+      "site_url": "https://toefl.neea.edu.cn/",
+      "published_at": null,
+      "deadline": null,
+      "summary": "北美方向常用；成绩有效期 2 年。",
+      "window": "全年多次，考位紧张时提前 2–3 个月",
+      "tips": "官网有免费模拟题（TOEFL iBT Free Practice Test）。",
+      "audience": [
+        "不限"
+      ],
+      "category": "语言",
+      "category_raw": "语言",
+      "group": "考试",
+      "kind": "exam",
+      "source": "考试入口",
+      "source_type": "考试入口",
+      "bucket": "列表",
+      "score": 10,
+      "days_left": null,
+      "scores": {
+        "relevance": 3,
+        "action": 3,
+        "urgency": 1,
+        "authority": 3
+      },
+      "reason": "常设考试入口（人工维护，不参与筛选）"
+    },
+    {
+      "id": "putonghua",
+      "title": "普通话水平测试（PSC）",
+      "url": "https://bm.cltt.org/",
+      "register_url": "https://bm.cltt.org/",
+      "site_url": "https://www.cltt.org/",
+      "published_at": null,
+      "deadline": null,
+      "summary": "教师资格认定、部分选调岗位要求二级乙等以上；本校测试站一般每学期组织。",
+      "window": "各校、各省测试站自行安排，通常每学期 1–2 次",
+      "tips": "先看本校教务处 / 语委通知，校测比社会考点便宜也好抢。",
+      "audience": [
+        "不限"
+      ],
+      "category": "语言",
+      "category_raw": "语言",
+      "group": "考试",
+      "kind": "exam",
+      "source": "考试入口",
+      "source_type": "考试入口",
+      "bucket": "列表",
+      "score": 10,
+      "days_left": null,
+      "scores": {
+        "relevance": 3,
+        "action": 3,
+        "urgency": 1,
+        "authority": 3
+      },
+      "reason": "常设考试入口（人工维护，不参与筛选）"
+    },
+    {
+      "id": "ntce",
+      "title": "中小学教师资格考试（NTCE）",
+      "url": "https://ntce.neea.edu.cn/",
+      "register_url": "https://ntce.neea.edu.cn/",
+      "site_url": "https://ntce.neea.edu.cn/",
+      "published_at": null,
+      "deadline": null,
+      "summary": "想当老师，或考选调时留个备选；笔试 + 面试，普通话需二级乙等以上。",
+      "window": "往年：上半年 1 月报名、3 月笔试；下半年 7 月报名、10 月底笔试",
+      "tips": "笔试大纲和科目说明在官网；面试报名要等笔试各科全部合格。",
+      "audience": [
+        "不限"
+      ],
+      "category": "资格",
+      "category_raw": "资格",
+      "group": "考试",
+      "kind": "exam",
+      "source": "考试入口",
+      "source_type": "考试入口",
+      "bucket": "列表",
+      "score": 10,
+      "days_left": null,
+      "scores": {
+        "relevance": 3,
+        "action": 3,
+        "urgency": 1,
+        "authority": 3
+      },
+      "reason": "常设考试入口（人工维护，不参与筛选）"
     }
   ],
   "dropped": [
