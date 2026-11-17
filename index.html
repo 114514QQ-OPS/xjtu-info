@@ -161,6 +161,8 @@ h1{margin:0;font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1;}
 .foot .dl b{font-family:var(--font-serif);font-weight:400;font-size:12.5px;}
 .src::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--line-2);margin-right:6px;transform:translateY(-1px);}
 .foot a{margin-left:auto;color:var(--ink-2);border-bottom:1px solid var(--line-2);padding-bottom:1px;}
+.foot .lk{margin-left:auto;display:flex;gap:14px;}
+.foot .lk a{margin-left:0;}
 .foot a:hover{color:var(--accent);border-color:var(--accent);}
 
 /* ---------- 右栏 ---------- */
@@ -275,6 +277,15 @@ footer a{border-bottom:1px solid var(--line-2);}
         <em>面试是线上还是线下，由 HR 在笔试通过后通知，岗位页不写这一项</em>
       </div>
     </div>
+    <!-- 考试：一份人工维护的目录，不是抓来的，写明它和上面那些数据不一样 -->
+    <div class="flowline" id="examline" hidden>
+      <span class="glabel">说明</span>
+      <div class="flow">
+        <span>常设入口</span><i>›</i>
+        <span>人工维护</span>
+        <em>报名时间每年会变，这里写的是往年规律，报名前一定以官网为准</em>
+      </div>
+    </div>
   </div>
 
   <div class="layout">
@@ -317,7 +328,7 @@ footer a{border-bottom:1px solid var(--line-2);}
       sNew=document.getElementById('s-new'), sWeek=document.getElementById('s-week'),
       sDate=document.getElementById('s-date'),
       dirs=document.getElementById('dirs'), dirline=document.getElementById('dirline'),
-      flowline=document.getElementById('flowline');
+      flowline=document.getElementById('flowline'), examline=document.getElementById('examline');
   var grp='all', cat='all', dir='all', asc=true, items=[], list0=[], shownCount=0, STATS={};
 
   function esc(v){
@@ -369,9 +380,11 @@ footer a{border-bottom:1px solid var(--line-2);}
   }
 
   function renderItem(it){
+    var isExam = (it.kind==='exam');
     var d=(it.days_left===undefined? null : it.days_left);
     var num=(d===null)? '—' : (d<0 ? Math.abs(d) : d);
     var lab=(d===null)? '无截止' : (d<0 ? '天前已过' : (d===0 ? '今天截止' : '天后截止'));
+    if(isExam){ num='常'; lab='常设入口'; }      // 考试是常设入口，不是截止日期
     var aud=(it.audience&&it.audience.length)? it.audience.join(' · ') : '不限年级';
     var tags='<span class="tag cat">'+esc(it.category||'其他')+'</span>'
             +'<span class="tag">'+esc(aud)+'</span>';
@@ -379,7 +392,18 @@ footer a{border-bottom:1px solid var(--line-2);}
     if(it.jobcat) tags+='<span class="tag job">'+esc(it.jobcat)+'</span>';
     if(it.job_type) tags+='<span class="tag">'+esc(it.job_type)+'</span>';
     if(d!==null && d>=0 && d<=3) tags+='<span class="tag pin">最容易错过</span>';
-    var dl=it.deadline ? ('截止 <b>'+esc(it.deadline.slice(5))+'</b>') : '正文未写截止日期';
+    var dl=isExam ? '时间以官网为准'
+         : (it.deadline ? ('截止 <b>'+esc(it.deadline.slice(5))+'</b>') : '正文未写截止日期');
+    var tail= isExam
+      ? '<span class="lk"><a href="'+esc(it.register_url||it.url)+'" target="_blank" rel="noopener">报名入口 ↗</a>'
+        + (it.site_url && it.site_url!==it.register_url
+            ? '<a href="'+esc(it.site_url)+'" target="_blank" rel="noopener">官网 ↗</a>' : '')
+        + '</span>'
+      : '<a href="'+esc(it.url)+'" target="_blank" rel="noopener">原文 ↗</a>';
+    var extra= isExam
+      ? (it.window ? '<div class="kv"><span class="k">时间</span><span class="v">'+esc(it.window)+'</span></div>' : '')
+        + (it.tips ? '<div class="kv"><span class="k">资料</span><span class="v">'+esc(it.tips)+'</span></div>' : '')
+      : '';
 
     var li=document.createElement('li');
     li.className='item';
@@ -397,11 +421,12 @@ footer a{border-bottom:1px solid var(--line-2);}
       +  (it.summary ? '<p class="desc">'+esc(it.summary)+'</p>' : '')
       +  (it.salary ? '<div class="kv"><span class="k">薪资</span><span class="v sal">'+esc(it.salary)+'</span></div>' : '')
       +  (it.require ? '<div class="kv"><span class="k">要求</span><span class="v">'+esc(it.require)+'</span></div>' : '')
+      +  extra
       +  '<div class="foot"><span class="dl">'+dl+'</span>'
       +  '<span class="src">'+esc(it.source||'')+'</span>'
       +  '<button class="star" data-id="'+esc(it.id)+'" aria-pressed="'+(isFav(it.id)?'true':'false')+'">'
       +    (isFav(it.id)?'★ 已收藏':'☆ 收藏')+'</button>'
-      +  '<a href="'+esc(it.url)+'" target="_blank" rel="noopener">原文 ↗</a></div>'
+      +  tail+'</div>'
       +'</div>';
     return li;
   }
@@ -453,9 +478,17 @@ footer a{border-bottom:1px solid var(--line-2);}
   function renderGroups(list){
     var map={};
     list.forEach(function(x){ var g=x.group||'学校通知'; map[g]=(map[g]||0)+1; });
-    // 「就业」是常驻大类：现在没有岗位也要出现，否则用户会以为没做
+    // 「就业」和「考试」是常驻大类：现在没有内容也要出现，否则用户会以为没做
     if(!('就业' in map)) map['就业']=0;
-    var names=Object.keys(map), html='';
+    if(!('考试' in map)) map['考试']=0;
+    // 大类顺序固定：学校通知 → 就业 → 考试，其余按出现顺序排在后面
+    var GORDER=['学校通知','就业','考试'];
+    var names=Object.keys(map).sort(function(a,b){
+      var ia=GORDER.indexOf(a), ib=GORDER.indexOf(b);
+      if(ia<0) ia=90; if(ib<0) ib=90;
+      return ia-ib || a.localeCompare(b);
+    });
+    var html='';
     html+='<button class="gtab" aria-pressed="'+(grp==='all')+'" data-group="all">全部<span class="n">'+list.length+'</span></button>';
     names.forEach(function(g){
       html+='<button class="gtab" aria-pressed="'+(grp===g)+'" data-group="'+esc(g)+'">'+esc(g)+'<span class="n">'+map[g]+'</span></button>';
@@ -468,7 +501,8 @@ footer a{border-bottom:1px solid var(--line-2);}
   function renderChips(list){
     var ORDER=['教务','奖助','竞赛','科研','就业','讲座','招聘',
                '彭康书院','宗濂书院','启德书院','崇实书院','南洋书院',
-               '华为','小米','比亚迪','中兴通讯','大疆','宁德时代'];
+               '华为','小米','比亚迪','中兴通讯','大疆','宁德时代',
+               '语言','计算机','升学','资格'];
     var inGroup=list.filter(function(x){ return grp==='all' || grp==='fav' || (x.group||'学校通知')===grp; });
     var map={};
     inGroup.forEach(function(x){ var c=x.category||'其他'; map[c]=(map[c]||0)+1; });
@@ -558,9 +592,10 @@ footer a{border-bottom:1px solid var(--line-2);}
 
   // 岗位方向（只在「就业」大类里出现）
   function renderDirs(){
-    if(grp!=='就业'){ dirline.hidden=true; flowline.hidden=true; return; }
-    dirline.hidden=false;
-    flowline.hidden=false;
+    if(grp!=='就业'){ dirline.hidden=true; flowline.hidden=true; }
+    else { dirline.hidden=false; flowline.hidden=false; }
+    examline.hidden = (grp!=='考试');
+    if(grp!=='就业') return;
     var ORDER=['芯片','算法','嵌入式','硬件','测试','软件','产品','其他'];
     var inGroup=list0.filter(function(x){ return (x.group||'学校通知')==='就业'; });
     var map={};
