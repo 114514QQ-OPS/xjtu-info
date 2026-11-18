@@ -24,7 +24,7 @@ import json
 import re
 import sys
 import unicodedata
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -355,7 +355,9 @@ def process(raw: list, grade: str = "大一", today: date | None = None, input_p
             dropped.append({**it, "reason": "缺 title 或 url"})
             continue
 
-        it["id"] = it.get("id") or make_id(norm_url(url) or title)
+        # id 用「原始 url + 标题」：Moka 那类站点的岗位 id 在 #fragment 里，
+        # 用 norm_url() 会把它们压成同一个 id，收藏和去重都会串台。
+        it["id"] = it.get("id") or make_id((url or "") + "|" + (it.get("title") or "") or title)
         it.setdefault("audience", [])
         it.setdefault("category", "其他")
         it.setdefault("source_type", "其他")
@@ -552,6 +554,108 @@ def load_exams(near: str | None = None) -> list:
             "reason": "常设考试入口（人工维护，不参与筛选）",
         })
     return out
+
+
+# ---------------------------------------------------------------------------
+# 前端产物：拆包 + 瘦身 + 日历
+# ---------------------------------------------------------------------------
+# 页面上真正会用到的字段。整页正文（body_text）、打分细节（scores）、丢弃原因（reason）
+# 只在筛选阶段有用，发到手机上是纯流量，全部不进前端文件。
+SLIM_KEYS = (
+    "id", "title", "url", "summary", "require", "salary",
+    "deadline", "days_left", "published_at", "source", "source_type",
+    "category", "audience", "bucket", "score", "group", "firm",
+    "jobcat", "subcat", "job_type", "kind", "window", "tips",
+    "register_url", "site_url", "professional",
+)
+
+
+def slim(item: dict) -> dict:
+    out = {}
+    for k in SLIM_KEYS:
+        v = item.get(k)
+        if v is None or v == "" or v == [] or v == {}:
+            continue
+        out[k] = v
+    return out
+
+
+def write_split(out: dict, output_path: str) -> dict:
+    """把结果拆成几个文件，首屏只下载「学校通知」。
+
+    feed.json          统计 + 学校通知（首屏，几十 KB）
+    feed-jobs.json     就业（点「就业」时才拉）
+    feed-exam.json     考试
+    feed-archive.json  归档（默认不加载）
+    """
+    base = Path(output_path).resolve().parent
+    items = out.get("items") or []
+    groups = {
+        "feed.json": [x for x in items
+                      if (x.get("group") or "学校通知") == "学校通知" and x.get("bucket") != "归档"],
+        "feed-jobs.json": [x for x in items if x.get("group") == "就业" and x.get("bucket") != "归档"],
+        "feed-exam.json": [x for x in items if x.get("group") == "考试"],
+        "feed-archive.json": [x for x in items if x.get("bucket") == "归档"],
+    }
+    sizes = {}
+    for name, rows in groups.items():
+        payload = {"items": [slim(x) for x in rows]}
+        if name == "feed.json":
+            payload["stats"] = out["stats"]
+        text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        (base / name).write_text(text, encoding="utf-8")
+        sizes[name] = round(len(text.encode()) / 1024, 1)
+    return sizes
+
+
+def write_ics(out: dict, output_path: str) -> int:
+    """把有截止日期的条目导出成日历文件：手机上订阅一次，到期前一天自动提醒。"""
+    base = Path(output_path).resolve().parent
+    stamp_now = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+    def esc(s: str) -> str:
+        return (s or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//infocha//xjtu-info//CN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "X-WR-CALNAME:大学生信息网 · 截止提醒",
+        "X-WR-TIMEZONE:Asia/Shanghai",
+    ]
+    n = 0
+    for it in out.get("items") or []:
+        if it.get("bucket") == "归档":
+            continue
+        d = parse_date(it.get("deadline") or "")
+        if not d:
+            continue
+        n += 1
+        title = (it.get("title") or "")[:70]
+        desc = ((it.get("summary") or "") + "\n" + (it.get("url") or "")).strip()
+        lines += [
+            "BEGIN:VEVENT",
+            f"UID:{(it.get('id') or str(n))}@xjtu-info",
+            f"DTSTAMP:{stamp_now}",
+            f"DTSTART;VALUE=DATE:{d.strftime('%Y%m%d')}",
+            f"SUMMARY:{esc(title)}",
+            f"DESCRIPTION:{esc(desc)}",
+            f"URL:{it.get('url') or ''}",
+            "TRANSP:TRANSPARENT",
+            "BEGIN:VALARM",
+            "TRIGGER:-P1D",
+            "ACTION:DISPLAY",
+            f"DESCRIPTION:{esc('明天截止：' + title)}",
+            "END:VALARM",
+            "END:VEVENT",
+        ]
+    lines.append("END:VCALENDAR")
+    (base / "deadlines.ics").write_text("\r\n".join(lines) + "\r\n", encoding="utf-8")
+    return n
+
+
 def main() -> int:
     try:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -578,10 +682,12 @@ def main() -> int:
     out = process(raw, grade=args.grade, today=today, input_path=args.input)
 
     if args.output:
-        Path(args.output).write_text(
-            json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-        print(f"已写入 {args.output}")
+        sizes = write_split(out, args.output)
+        n_ics = write_ics(out, args.output)
+        total = sum(sizes.values())
+        print("已写入 " + " / ".join(f"{k} {v}KB" for k, v in sizes.items())
+              + f"（合计 {total:.0f}KB）")
+        print(f"日历 deadlines.ics：{n_ics} 个截止日期")
 
     st = out["stats"]
     print(f"\n[{st['today']}] 学段={st['grade']}  输入 {st['input']} 条 → "
