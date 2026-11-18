@@ -649,13 +649,38 @@ footer a{border-bottom:1px solid var(--line-2);}
     asc=!asc; sortItems();
   });
 
-  // 单文件离线版会把数据直接内联进 window.__FEED__，这时不发请求
-  var src = window.__FEED__
-    ? Promise.resolve(window.__FEED__)
-    : fetch('feed.json',{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+  // 数据加载：主源是本站 feed.json；打不开时依次试备用镜像（跨域也放行，靠 CORS）
+  var MIRRORS = window.__MIRRORS__ || [
+    'https://114514qq-ops.github.io/xjtu-info/feed.json',
+    'https://cdn.jsdelivr.net/gh/114514QQ-OPS/xjtu-info@main/feed.json',
+    'https://fastly.jsdelivr.net/gh/114514QQ-OPS/xjtu-info@main/feed.json'
+  ];
+  function fetchFeed(url){
+    return fetch(url,{cache:'no-store'}).then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    });
+  }
+  function tryEach(urls, i){
+    i=i||0;
+    if(i>=urls.length) return Promise.reject(new Error('备用地址都打不开'));
+    return fetchFeed(urls[i]).catch(function(){ return tryEach(urls, i+1); });
+  }
 
-  src
+  // 单文件离线版把数据内联进 window.__FEED__：立刻画出来，再后台找新的
+  var initial;
+  if(window.__FEED__){
+    initial = Promise.resolve(window.__FEED__);
+  } else if(location.protocol === 'file:'){
+    initial = tryEach(MIRRORS);
+  } else {
+    initial = fetchFeed('feed.json').catch(function(){ return tryEach(MIRRORS); });
+  }
+
+  var applied = null;
+  initial
     .then(function(data){
+      applied = data;
       // 只把「头条 / 列表」画出来；「归档」留在 feed.json 里备查，不参与刷屏
       var list=(data.items||[]).filter(function(x){
         return x.bucket==='头条' || x.bucket==='列表';
@@ -681,6 +706,35 @@ footer a{border-bottom:1px solid var(--line-2);}
         if(b) b.innerHTML='<b>离线版</b> · 数据截至 '+esc(td||'—')+' · 这份不会自动更新，要看新的用在线版';
       }
       paint();
+
+      // 内联快照画完之后，再去镜像找一次更新的数据；有新日期就换掉
+      if(window.__FEED__ && MIRRORS.length){
+        tryEach(MIRRORS).then(function(fresh){
+          var a=((applied.stats&&applied.stats.today)||''),
+              b=((fresh.stats&&fresh.stats.today)||'');
+          if(!b || b===a || !(fresh.items&&fresh.items.length)) return;
+          window.__FEED__=null;
+          var list2=(fresh.items||[]).filter(function(x){
+            return x.bucket==='头条' || x.bucket==='列表';
+          });
+          list0=list2; STATS=(fresh.stats||{}); applied=fresh;
+          renderGroups(list0); renderChips(list0); renderSoon(list0);
+          renderHealth((fresh.stats&&fresh.stats.sources)||[]);
+          sNew.textContent=list2.length;
+          sWeek.textContent=list2.filter(function(x){
+            return x.days_left!==null && x.days_left>=0 && x.days_left<=7;
+          }).length;
+          sDate.textContent=(b||'').slice(5) || '—';
+          var sb=document.getElementById('s-bar'); if(sb) sb.textContent=b;
+          var s2=(fresh.stats&&fresh.stats.sources)||[];
+          var n2=document.getElementById('s-nsrc'), s3=document.getElementById('s-srcs');
+          if(n2) n2.textContent=s2.length;
+          if(s3) s3.textContent=s2.map(function(x){return x.name;}).join(' / ');
+          var bb=document.querySelector('.demo');
+          if(bb) bb.innerHTML='<b>已更新</b> · 数据截至 '+esc(b)+' · 刚连上网络抓到的';
+          paint();
+        }).catch(function(){ /* 连不上就继续看快照，不打扰 */ });
+      }
     })
     .catch(function(err){
       var box=document.createElement('div');
