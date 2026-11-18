@@ -539,6 +539,7 @@ def load_exams(near: str | None = None) -> list:
             "summary": e.get("summary"),
             "window": e.get("window"),
             "tips": e.get("tips"),
+            "res": e.get("res") or [],
             "audience": e.get("audience") or ["不限"],
             "category": e.get("category") or "其他",
             "category_raw": e.get("category") or "其他",
@@ -565,7 +566,7 @@ SLIM_KEYS = (
     "id", "title", "url", "summary", "require", "salary",
     "deadline", "days_left", "published_at", "source", "source_type",
     "category", "audience", "bucket", "score", "group", "firm",
-    "jobcat", "subcat", "job_type", "kind", "window", "tips",
+    "jobcat", "subcat", "job_type", "kind", "window", "tips", "res",
     "register_url", "site_url", "professional",
 )
 
