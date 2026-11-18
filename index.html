@@ -302,7 +302,7 @@ footer a{border-bottom:1px solid var(--line-2);}
 
   <footer>
     <span>大学生信息网</span>
-    <span><a href="app/xjtu-info.apk" download>下载安卓版</a> · <a href="offline.html" download="xjtu-info.html">下载离线版</a></span>
+    <span><a href="deadlines.ics">订阅截止日历</a> · <a href="app/xjtu-info.apk" download>下载安卓版</a> · <a href="offline.html" download="xjtu-info.html">下载离线版</a></span>
   </footer>
 </div>
 
@@ -677,6 +677,28 @@ footer a{border-bottom:1px solid var(--line-2);}
     initial = fetchFeed('feed.json').catch(function(){ return tryEach(MIRRORS); });
   }
 
+  // 首屏只下 feed.json（学校通知，几 KB）；就业/考试单独拉，拉完并进同一份 list0 再重画
+  function loadRest(){
+    var base = (location.protocol === 'file:') ? 'https://114514qq-ops.github.io/xjtu-info/' : '';
+    ['feed-jobs.json','feed-exam.json'].forEach(function(f){
+      var urls = [base + f];
+      if(base) urls.push('https://cdn.jsdelivr.net/gh/114514QQ-OPS/xjtu-info@main/' + f);
+      else urls.push('https://cdn.jsdelivr.net/gh/114514QQ-OPS/xjtu-info@main/' + f);
+      tryEach(urls).then(function(d){
+        var seen = {}, added = 0;
+        list0.forEach(function(x){ seen[x.id] = 1; });
+        (d.items || []).forEach(function(x){
+          if(x.bucket === '归档' || seen[x.id]) return;
+          seen[x.id] = 1; list0.push(x); added++;
+        });
+        if(!added) return;
+        renderGroups(list0); renderChips(list0); renderSoon(list0);
+        sNew.textContent = list0.length;
+        paint();
+      }).catch(function(){ /* 拉不到就算了，学校通知还能看 */ });
+    });
+  }
+
   var applied = null;
   initial
     .then(function(data){
@@ -706,8 +728,7 @@ footer a{border-bottom:1px solid var(--line-2);}
         if(b) b.innerHTML='<b>离线版</b> · 数据截至 '+esc(td||'—')+' · 这份不会自动更新，要看新的用在线版';
       }
       paint();
-
-      // 内联快照画完之后，再去镜像找一次更新的数据；有新日期就换掉
+      loadRest();
       if(window.__FEED__ && MIRRORS.length){
         tryEach(MIRRORS).then(function(fresh){
           var a=((applied.stats&&applied.stats.today)||''),
@@ -733,6 +754,7 @@ footer a{border-bottom:1px solid var(--line-2);}
           var bb=document.querySelector('.demo');
           if(bb) bb.innerHTML='<b>已更新</b> · 数据截至 '+esc(b)+' · 刚连上网络抓到的';
           paint();
+          loadRest();
         }).catch(function(){ /* 连不上就继续看快照，不打扰 */ });
       }
     })
