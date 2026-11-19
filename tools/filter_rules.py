@@ -28,6 +28,13 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+try:                                   # 拼音搜索是加分项，没装也不能影响主流程
+    from pypinyin import lazy_pinyin
+    _PINYIN = True
+except Exception:                      # noqa: BLE001
+    lazy_pinyin = None
+    _PINYIN = False
+
 # ============================================================================
 # CONFIG —— 你只需要改这一段
 # ============================================================================
@@ -341,6 +348,29 @@ GROUP_DEFAULT = "学校通知"
 GROUP_BY_CATEGORY: dict[str, str] = {"招聘": "就业", "华为": "就业", "小米": "就业", "比亚迪": "就业", "中兴通讯": "就业", "大疆": "就业", "宁德时代": "就业", "腾讯": "就业", "美团": "就业", "字节跳动": "就业"}
 
 
+_CITY_SPLIT = re.compile(r"[·、/，,\s]+")
+
+
+def split_cities(text) -> list:
+    """从「深圳市」「上海市·西安市」这种字符串里拆出城市列表。"""
+    out = []
+    for t in _CITY_SPLIT.split(str(text or "")):
+        t = t.strip()
+        if 2 <= len(t) <= 8 and t not in out:
+            out.append(t)
+    return out[:8]
+
+
+def initials(text: str) -> str:
+    """标题的拼音首字母，用来支持「jw」搜「教务」。没装 pypinyin 就返回空。"""
+    if not _PINYIN:
+        return ""
+    try:
+        return "".join(x[0] for x in lazy_pinyin(text or "") if x).lower()
+    except Exception:                      # noqa: BLE001
+        return ""
+
+
 def process(raw: list, grade: str = "大一", today: date | None = None, input_path=None) -> dict:
     today = today or date.today()
     dropped, survivors = [], []
@@ -391,6 +421,35 @@ def process(raw: list, grade: str = "大一", today: date | None = None, input_p
             dropped.append({**it, "reason": f"重复（与「{k.get('title')}」{why}）"})
         else:
             kept.append(it)
+
+    # --- 同名岗位合并：同一家公司同一个标题，只差城市/批次时合成一条 ---
+    # 只看「公司 + 标题」两个字段，不碰技术方向的差异化岗位；
+    # 城市从 summary 里拆（各公司的写法是「深圳市」「上海市·西安市」）。
+    merged, seen_key = [], {}
+    for it in kept:
+        if it.get("category") not in JOB_FIRMS:
+            merged.append(it)
+            continue
+        key = (it["category"], (it.get("title") or "").strip())
+        first = seen_key.get(key)
+        if first is None:
+            first = dict(it)
+            first["cities"] = split_cities(it.get("summary"))
+            seen_key[key] = first
+            merged.append(first)
+            continue
+        # 合并城市、取更早的截止
+        for c in split_cities(it.get("summary")):
+            if c and c not in first["cities"]:
+                first["cities"].append(c)
+        d1, d2 = parse_date(first.get("deadline") or ""), parse_date(it.get("deadline") or "")
+        if d2 and (not d1 or d2 < d1):
+            first["deadline"] = it.get("deadline")
+        first["variants"] = first.get("variants", 0) + 1
+    for it in merged:
+        if it.get("cities"):
+            it["summary"] = " · ".join(it["cities"][:6])
+    kept = merged
 
     # --- 打分分档 ---
     # 分档后标成「丢弃」的（太旧、没行动类关键词）从 items 里拿出去，
@@ -567,6 +626,7 @@ SLIM_KEYS = (
     "deadline", "days_left", "published_at", "source", "source_type",
     "category", "audience", "bucket", "score", "group", "firm",
     "jobcat", "subcat", "job_type", "kind", "window", "tips", "res",
+    "cities", "variants", "is_new", "py",
     "register_url", "site_url", "professional",
 )
 
@@ -681,6 +741,33 @@ def main() -> int:
 
     today = parse_date(args.today) or date.today()
     out = process(raw, grade=args.grade, today=today, input_path=args.input)
+
+    # 拼音首字母（页面搜索用）：装了 pypinyin 才有，没装也不影响别的
+    for it in out["items"]:
+        if not it.get("py"):
+            it["py"] = initials(it.get("title") or "")
+
+    # 「今天新增」：和上一版文件做差集。第一次跑没有旧文件，就都不算新，
+    # 免得第一次上线的 200 条全顶着「新」。
+    prev_ids = set()
+    prev_dir = Path(args.output).resolve().parent if args.output else None
+    if prev_dir:
+        for f in ("feed.json", "feed-jobs.json", "feed-exam.json", "feed-archive.json"):
+            p = prev_dir / f
+            if not p.exists():
+                continue
+            try:
+                d = json.loads(p.read_text(encoding="utf-8"))
+                for x in (d.get("items") or []):
+                    if x.get("id"):
+                        prev_ids.add(x["id"])
+            except Exception:          # noqa: BLE001
+                pass
+    n_new = 0
+    for it in out["items"]:
+        it["is_new"] = bool(prev_ids) and it.get("id") not in prev_ids
+        n_new += 1 if it["is_new"] else 0
+    out["stats"]["new"] = n_new
 
     if args.output:
         sizes = write_split(out, args.output)
