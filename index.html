@@ -178,6 +178,9 @@ h1{margin:0;font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1;}
   font:inherit;font-size:12.5px;color:var(--ink-3);border-bottom:1px solid transparent;}
 .foot .lnkcopy:hover{color:var(--accent);border-bottom-color:var(--accent);}
 footer .hits{vertical-align:-2px;margin-left:8px;opacity:.65;max-width:100%;}
+.favtools{display:inline-block;margin-top:14px;font-size:12.5px;color:var(--ink-3);}
+.favtools a,.favtools label{cursor:pointer;color:var(--ink-2);border-bottom:1px solid var(--line-2);}
+.favtools a:hover,.favtools label:hover{color:var(--accent);border-color:var(--accent);}
 .item.flash{animation:flash 2.6s ease-out;}
 @keyframes flash{0%,55%{background:#FBF0EC;}100%{background:transparent;}}
 .kv .v .res{margin-left:2px;border-bottom:1px solid var(--line-2);white-space:nowrap;}
@@ -478,9 +481,14 @@ footer a{border-bottom:1px solid var(--line-2);}
     arr.forEach(function(it){ feed.appendChild(renderItem(it)); });
     items=Array.prototype.slice.call(feed.querySelectorAll('.item'));
     sortItems(); renderDirs(); renderSubs(); refresh();
-    if(grp==='fav' && !arr.length){
+    if(grp==='fav'){
+      var tools='<span class="favtools">收藏存在这台设备的浏览器里，换设备或清缓存就没了：'
+        +'<a href="#" id="fav-exp">导出一份</a> · '
+        +'<label for="fav-file">导入</label>'
+        +'<input type="file" id="fav-file" accept=".json,application/json" hidden></span>';
       empty.style.display='block';
-      empty.innerHTML='<b>还没有收藏</b>在通知右下角点「☆ 收藏」，收藏的都会出现在这里。';
+      empty.innerHTML=(arr.length?'':'<b>还没有收藏</b>在通知右下角点「☆ 收藏」，收藏的都会出现在这里。<br>')
+        +tools;
     }else if(grp==='就业' && !shownCount){
       empty.style.display='block';
       empty.innerHTML='<b>就业这一栏还没内容</b>华为 2027 届秋招已经收尾，现在开放岗位 0 个。'
@@ -652,6 +660,35 @@ footer a{border-bottom:1px solid var(--line-2);}
     el.classList.add('flash');
     setTimeout(function(){ el.classList.remove('flash'); },2600);
   }
+
+  // 收藏导出 / 导入：换设备、清缓存时不至于全丢
+  document.addEventListener('click',function(e){
+    if(!e.target || e.target.id!=='fav-exp') return;
+    e.preventDefault();
+    var blob=new Blob([JSON.stringify(FAVS)],{type:'application/json'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='xjtu-favs-'+new Date().toISOString().slice(0,10)+'.json';
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); },2000);
+  });
+  document.addEventListener('change',function(e){
+    if(!e.target || e.target.id!=='fav-file') return;
+    var f=e.target.files && e.target.files[0];
+    if(!f) return;
+    var r=new FileReader();
+    r.onload=function(){
+      try{
+        var d=JSON.parse(r.result), n=0;
+        Object.keys(d||{}).forEach(function(k){
+          if(!FAVS[k]){ FAVS[k]=d[k]; n++; }
+        });
+        saveFavs(); paint();
+        alert('导入 '+n+' 条收藏');
+      }catch(err){ alert('这个文件不对，应该是从这里导出的 JSON'); }
+    };
+    r.readAsText(f);
+  });
 
   chips.addEventListener('click',function(e){
     var b=e.target.closest('.chip');
