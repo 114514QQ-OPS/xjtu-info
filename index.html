@@ -149,6 +149,12 @@ h1{margin:0;font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1;}
 .tag.pin{color:var(--accent);border-color:#E0B9B2;background:var(--accent-bg);}
 .tag.job{color:var(--ink);background:#EDF1EC;border-color:#CFD8CB;font-weight:600;}
 .tag.pro{color:var(--accent);border-color:#D9B7AF;background:#FBF0EC;font-weight:600;}
+.tag.new{color:#fff;background:var(--accent);border-color:var(--accent);font-weight:600;letter-spacing:.06em;padding:0 5px;}
+.statbtn{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:right;}
+.statbtn:hover b{color:var(--accent);}
+.statbtn[aria-pressed="true"] b{color:var(--accent);}
+.chip.newchip{font-weight:600;}
+.chip.newchip[aria-pressed="true"]{color:var(--accent);border-color:var(--accent);}
 .item h2{
   margin:0 0 6px;font-size:16.5px;font-weight:650;line-height:1.45;letter-spacing:-.005em;
 }
@@ -168,6 +174,12 @@ h1{margin:0;font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1;}
 .foot a{margin-left:auto;color:var(--ink-2);border-bottom:1px solid var(--line-2);padding-bottom:1px;}
 .foot .lk{margin-left:auto;display:flex;gap:14px;}
 .foot .lk a{margin-left:0;}
+.foot .lnkcopy{order:9;border:0;background:none;padding:0 0 1px;margin-left:2px;cursor:pointer;
+  font:inherit;font-size:12.5px;color:var(--ink-3);border-bottom:1px solid transparent;}
+.foot .lnkcopy:hover{color:var(--accent);border-bottom-color:var(--accent);}
+footer .hits{vertical-align:-2px;margin-left:8px;opacity:.65;max-width:100%;}
+.item.flash{animation:flash 2.6s ease-out;}
+@keyframes flash{0%,55%{background:#FBF0EC;}100%{background:transparent;}}
 .kv .v .res{margin-left:2px;border-bottom:1px solid var(--line-2);white-space:nowrap;}
 .foot a:hover{color:var(--accent);border-color:var(--accent);}
 
@@ -250,6 +262,7 @@ footer a{border-bottom:1px solid var(--line-2);}
       </div>
       <div class="headright">
         <div class="stat"><b id="s-new">—</b><span>收录条目</span></div>
+        <button class="stat statbtn" id="s-today" type="button" title="只看今天新增的"><b>—</b><span>今天新增</span></button>
         <div class="stat"><b id="s-week">—</b><span>本周截止</span></div>
         <div class="stat"><b id="s-date">—</b><span>数据截至</span></div>
       </div>
@@ -302,7 +315,7 @@ footer a{border-bottom:1px solid var(--line-2);}
   </div>
 
   <footer>
-    <span>大学生信息网</span>
+    <span>大学生信息网 <img class="hits" src="https://hits.sh/114514qq-ops.github.io/xjtu-info.svg?label=%E8%AE%BF%E9%97%AE&amp;color=A9362B&amp;labelColor=8C8781" alt="" loading="lazy"></span>
     <span><a href="deadlines.ics">订阅截止日历</a> · <a href="app/xjtu-info.apk" download>下载安卓版</a> · <a href="offline.html" download="xjtu-info.html">下载离线版</a></span>
   </footer>
 </div>
@@ -315,9 +328,11 @@ footer a{border-bottom:1px solid var(--line-2);}
       healthEl=document.getElementById('health'),
       sNew=document.getElementById('s-new'), sWeek=document.getElementById('s-week'),
       sDate=document.getElementById('s-date'),
+      sToday=document.getElementById('s-today'), onlyNewBtn=document.getElementById('onlyNew'),
+      nNew=document.getElementById('n-new'),
       dirs=document.getElementById('dirs'), dirline=document.getElementById('dirline'),
       subs=document.getElementById('subs'), subline=document.getElementById('subline');
-  var grp='all', cat='all', dir='all', sub='all', asc=true, items=[], list0=[], shownCount=0, STATS={};
+  var grp='all', cat='all', dir='all', sub='all', asc=true, onlyNew=false, items=[], list0=[], shownCount=0, STATS={};
 
   function esc(v){
     return String(v==null?'':v).replace(/[&<>"]/g,function(c){
@@ -376,6 +391,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     var aud=(it.audience&&it.audience.length)? it.audience.join(' · ') : '不限年级';
     var tags='<span class="tag cat">'+esc(it.category||'其他')+'</span>'
             +'<span class="tag">'+esc(aud)+'</span>';
+    if(it.is_new) tags='<span class="tag new">新</span>'+tags;
     if(it.topic && it.topic!=='其他') tags+='<span class="tag">'+esc(it.topic)+'</span>';
     if(it.jobcat) tags+='<span class="tag job">'+esc(it.jobcat)+'</span>';
     if(it.job_type) tags+='<span class="tag">'+esc(it.job_type)+'</span>';
@@ -388,7 +404,8 @@ footer a{border-bottom:1px solid var(--line-2);}
         + (it.site_url && it.site_url!==it.register_url
             ? '<a href="'+esc(it.site_url)+'" target="_blank" rel="noopener">官网 ↗</a>' : '')
         + '</span>'
-      : '<a href="'+esc(it.url)+'" target="_blank" rel="noopener">原文 ↗</a>';
+      : '<a href="'+esc(it.url)+'" target="_blank" rel="noopener">原文 ↗</a>'
+        + '<button class="lnkcopy" type="button" data-id="'+esc(it.id||'')+'" title="复制这条的链接">链接</button>';
     var extra= isExam
       ? (it.window ? '<div class="kv"><span class="k">时间</span><span class="v">'+esc(it.window)+'</span></div>' : '')
         + ((it.tips || (it.res && it.res.length))
@@ -403,6 +420,8 @@ footer a{border-bottom:1px solid var(--line-2);}
     var li=document.createElement('li');
     li.className='item';
     li.dataset.cat=it.category||'其他';
+    li.dataset.new=it.is_new?'1':'0';
+    li.dataset.py=(it.py||'');
     li.dataset.group=it.group||'学校通知';
     li.dataset.id=it.id||'';
     li.dataset.days=(d===null? 9999 : d);
@@ -443,7 +462,8 @@ footer a{border-bottom:1px solid var(--line-2);}
           && (cat==='all'||el.dataset.cat===cat)
           && (dir==='all'||el.dataset.dir===dir)
           && (sub==='all'||el.dataset.sub===sub)
-          && (!kw || el.textContent.toLowerCase().indexOf(kw)>-1);
+          && (!onlyNew || el.dataset.new==='1')
+          && (!kw || el.textContent.toLowerCase().indexOf(kw)>-1 || (el.dataset.py||'').indexOf(kw)>-1);
       el.style.display=ok?'':'none';
       if(ok) shown++;
     });
@@ -530,10 +550,22 @@ footer a{border-bottom:1px solid var(--line-2);}
   }
 
   function renderHealth(sources){
-    var html=(sources||[]).map(function(s){
-      return '<li><i class="dot '+(s.out>0?'ok':'off')+'"></i><span class="nm">'+esc(s.name)+'</span>'
+    var all=(sources||[]);
+    var live=all.filter(function(s){ return s.out>0; });
+    var quiet=all.filter(function(s){ return !(s.out>0) && s.in>0; });
+    var zero=all.filter(function(s){ return !(s.out>0) && !(s.in>0); });
+    var html=live.map(function(s){
+      return '<li><i class="dot ok"></i><span class="nm">'+esc(s.name)+'</span>'
             +'<span class="st">抓 '+s.in+' · 入选 '+s.out+'</span></li>';
     }).join('');
+    // 抓了但 0 入选的源合成一行：挨个列出来太长，还显得像坏了
+    if(quiet.length){
+      html+='<li><i class="dot off"></i><span class="nm">另有 '+quiet.length+' 个源今天没有合适的通知</span>'
+           +'<span class="st">'+esc(quiet.map(function(s){return s.name;}).join(' / '))+'</span></li>';
+    }
+    zero.forEach(function(s){
+      html+='<li><i class="dot off"></i><span class="nm">'+esc(s.name)+'</span><span class="st">今天没岗位</span></li>';
+    });
     ['资助中心','就业中心','图书馆','兵马俑BBS'].forEach(function(k){
       html+='<li><i class="dot off"></i><span class="nm">'+esc(k)+'</span>'
            +'<span class="st">未接入</span></li>';
@@ -577,6 +609,50 @@ footer a{border-bottom:1px solid var(--line-2);}
       b.textContent = nowFav ? '★ 已收藏' : '☆ 收藏';
     }
   });
+  // 顶部「今天新增」就是「只看新增」的开关
+  function toggleOnlyNew(){
+    onlyNew=!onlyNew;
+    if(sToday) sToday.setAttribute('aria-pressed', onlyNew?'true':'false');
+    refresh();
+  }
+  if(onlyNewBtn) onlyNewBtn.addEventListener('click',toggleOnlyNew);
+  if(sToday) sToday.addEventListener('click',toggleOnlyNew);
+
+  function refreshHead(){
+    var n=0;
+    list0.forEach(function(x){ if(x.is_new) n++; });
+    if(nNew) nNew.textContent=n;
+    if(sToday) sToday.querySelector('b').textContent=n;
+    sNew.textContent=list0.length;
+    if(sToday) sToday.style.display = (n>0 || onlyNew) ? '' : 'none';
+  }
+
+  // 复制单条链接：发到班级群时，点开能直接定位到那一条
+  feed.addEventListener('click',function(e){
+    var b=e.target.closest('.lnkcopy');
+    if(!b) return;
+    e.preventDefault();
+    var id=b.dataset.id||'';
+    var url=location.origin+location.pathname+'#id='+id;
+    var done=function(){ var t=b.textContent; b.textContent='已复制'; setTimeout(function(){ b.textContent=t; },1400); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(done,function(){ window.prompt('复制这条链接',url); });
+    }else{
+      window.prompt('复制这条链接',url);
+    }
+  });
+
+  // 带 #id= 打开时，滚到那一条并闪一下
+  function jumpToHash(){
+    if(location.hash.indexOf('#id=')!==0) return;
+    var id=location.hash.slice(4);
+    var el=feed.querySelector('[data-id="'+id.replace(/"/g,'')+'"]');
+    if(!el) return;
+    el.scrollIntoView({block:'center'});
+    el.classList.add('flash');
+    setTimeout(function(){ el.classList.remove('flash'); },2600);
+  }
+
   chips.addEventListener('click',function(e){
     var b=e.target.closest('.chip');
     if(!b) return;
@@ -700,8 +776,9 @@ footer a{border-bottom:1px solid var(--line-2);}
         });
         if(!added) return;
         renderGroups(list0); renderChips(list0); renderSoon(list0);
-        sNew.textContent = list0.length;
+        refreshHead();
         paint();
+        jumpToHash();
       }).catch(function(){ /* 拉不到就算了，学校通知还能看 */ });
     });
   }
@@ -735,7 +812,9 @@ footer a{border-bottom:1px solid var(--line-2);}
         if(b) b.innerHTML='<b>离线版</b> · 数据截至 '+esc(td||'—')+' · 这份不会自动更新，要看新的用在线版';
       }
       paint();
+      refreshHead();
       loadRest();
+      jumpToHash();
       if(window.__FEED__ && MIRRORS.length){
         tryEach(MIRRORS).then(function(fresh){
           var a=((applied.stats&&applied.stats.today)||''),
@@ -761,6 +840,7 @@ footer a{border-bottom:1px solid var(--line-2);}
           var bb=document.querySelector('.demo');
           if(bb) bb.innerHTML='<b>已更新</b> · 数据截至 '+esc(b)+' · 刚连上网络抓到的';
           paint();
+          refreshHead();
           loadRest();
         }).catch(function(){ /* 连不上就继续看快照，不打扰 */ });
       }
