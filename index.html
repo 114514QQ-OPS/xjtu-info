@@ -285,6 +285,11 @@ footer a{border-bottom:1px solid var(--line-2);}
       </label>
       <button class="sortbtn" id="sort">按截止日期排序 ↓</button>
     </div>
+    <!-- 类型：校招 / 社招 / 实习，同样只在「就业」里出现 -->
+    <div class="filterline dirline" id="kindline" hidden>
+      <span class="glabel">类型</span>
+      <div class="chips" id="kinds"></div>
+    </div>
     <!-- 岗位方向：只在「就业」大类里出现，其他大类没有这一行 -->
     <div class="filterline dirline" id="dirline" hidden>
       <span class="glabel">方向</span>
@@ -334,8 +339,9 @@ footer a{border-bottom:1px solid var(--line-2);}
       sToday=document.getElementById('s-today'), onlyNewBtn=document.getElementById('onlyNew'),
       nNew=document.getElementById('n-new'),
       dirs=document.getElementById('dirs'), dirline=document.getElementById('dirline'),
-      subs=document.getElementById('subs'), subline=document.getElementById('subline');
-  var grp='all', cat='all', dir='all', sub='all', asc=true, onlyNew=false, items=[], list0=[], shownCount=0, STATS={};
+      subs=document.getElementById('subs'), subline=document.getElementById('subline'),
+      kinds=document.getElementById('kinds'), kindline=document.getElementById('kindline');
+  var grp='all', cat='all', kind='all', dir='all', sub='all', asc=true, onlyNew=false, items=[], list0=[], shownCount=0, STATS={};
 
   function esc(v){
     return String(v==null?'':v).replace(/[&<>"]/g,function(c){
@@ -429,6 +435,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     li.dataset.id=it.id||'';
     li.dataset.days=(d===null? 9999 : d);
     li.dataset.dir=it.jobcat||'';
+    li.dataset.kind=it.kind||'';
     li.dataset.sub=it.subcat||'';
     li.dataset.title=it.title+' '+(it.jobcat||'')+' '+(it.job_type||'')+' '+(it.source||'');
     li.innerHTML=
@@ -463,6 +470,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     items.forEach(function(el){
       var ok=(grp==='all'||grp==='fav'||el.dataset.group===grp)
           && (cat==='all'||el.dataset.cat===cat)
+          && (kind==='all'||el.dataset.kind===kind)
           && (dir==='all'||el.dataset.dir===dir)
           && (sub==='all'||el.dataset.sub===sub)
           && (!onlyNew || el.dataset.new==='1')
@@ -480,7 +488,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     feed.innerHTML='';
     arr.forEach(function(it){ feed.appendChild(renderItem(it)); });
     items=Array.prototype.slice.call(feed.querySelectorAll('.item'));
-    sortItems(); renderDirs(); renderSubs(); refresh();
+    sortItems(); renderKinds(); renderDirs(); renderSubs(); refresh();
     if(grp==='fav'){
       var tools='<span class="favtools">收藏存在这台设备的浏览器里，换设备或清缓存就没了：'
         +'<a href="#" id="fav-exp">导出一份</a> · '
@@ -585,7 +593,7 @@ footer a{border-bottom:1px solid var(--line-2);}
     var b=e.target.closest('.gtab');
     if(!b) return;
     grp=b.dataset.group;
-    cat='all'; dir='all'; sub='all';   // 换大类时，子类、方向、细分都清零
+    cat='all'; kind='all'; dir='all'; sub='all';   // 换大类时，子类、类型、方向、细分都清零
     Array.prototype.forEach.call(groupsEl.children,function(c){
       c.setAttribute('aria-pressed', c===b?'true':'false');
     });
@@ -700,12 +708,45 @@ footer a{border-bottom:1px solid var(--line-2);}
     refresh();
   });
 
+  // 类型（校招 / 社招 / 实习，只在「就业」大类里出现）
+  function renderKinds(){
+    if(grp!=='就业'){ kindline.hidden=true; return; }
+    kindline.hidden=false;
+    var ORDER=['校招','实习','社招'];
+    var inGroup=list0.filter(function(x){ return (x.group||'学校通知')==='就业'; });
+    var map={};
+    inGroup.forEach(function(x){ var c=x.kind||'校招'; map[c]=(map[c]||0)+1; });
+    var names=Object.keys(map).sort(function(a,b){
+      var ia=ORDER.indexOf(a), ib=ORDER.indexOf(b);
+      if(ia<0) ia=99; if(ib<0) ib=99;
+      return ia-ib;
+    });
+    var html='<button class="chip" aria-pressed="'+(kind==='all')+'" data-kind="all">全部<span class="n">'
+             +inGroup.length+'</span></button>';
+    names.forEach(function(c){
+      html+='<button class="chip" aria-pressed="'+(kind===c)+'" data-kind="'+esc(c)+'">'
+            +esc(c)+'<span class="n">'+map[c]+'</span></button>';
+    });
+    kinds.innerHTML=html;
+  }
+
+  kinds.addEventListener('click',function(e){
+    var b=e.target.closest('.chip');
+    if(!b) return;
+    kind=b.dataset.kind;
+    Array.prototype.forEach.call(kinds.children,function(c){
+      c.setAttribute('aria-pressed', c===b?'true':'false');
+    });
+    renderDirs(); renderSubs(); refresh();
+  });
+
   // 岗位方向（只在「就业」大类里出现）
   function renderDirs(){
     if(grp!=='就业'){ dirline.hidden=true; return; }
     dirline.hidden=false;
     var ORDER=['芯片','算法','嵌入式','硬件','测试','软件','机械','产品','职能','其他'];
-    var inGroup=list0.filter(function(x){ return (x.group||'学校通知')==='就业'; });
+    var inGroup=list0.filter(function(x){ return (x.group||'学校通知')==='就业'
+      && (kind==='all'||(x.kind||'校招')===kind); });
     var map={};
     inGroup.forEach(function(x){ var c=x.jobcat||'其他'; map[c]=(map[c]||0)+1; });
     var names=Object.keys(map).sort(function(a,b){
