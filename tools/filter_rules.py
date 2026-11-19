@@ -430,7 +430,7 @@ def process(raw: list, grade: str = "大一", today: date | None = None, input_p
         if it.get("category") not in JOB_FIRMS:
             merged.append(it)
             continue
-        key = (it["category"], (it.get("title") or "").strip())
+        key = (it["category"], (it.get("title") or "").strip(), it.get("kind") or "校招")
         first = seen_key.get(key)
         if first is None:
             first = dict(it)
