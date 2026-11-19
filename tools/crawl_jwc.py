@@ -579,7 +579,7 @@ def pick_salary(text: str) -> str | None:
 
 
 
-def huawei_item(j: dict, jt: str) -> dict:
+def huawei_item(j: dict, jt: str, kind: str = "校招") -> dict:
     """把华为接口返回的一条职位，翻译成我们自己的条目格式。"""
     jid = j.get("jobId")
     title = (j.get("jobname") or j.get("nameCn") or "").strip()
@@ -614,33 +614,37 @@ def huawei_item(j: dict, jt: str) -> dict:
         "jobcat": guess_job_cat(title, fam),
         "source": "华为招聘",
         "source_type": "华为招聘",
-        "job_type": HUAWEI_JOB_TYPE_NAME.get(jt, ""),
+        "job_type": kind,
         "job_area": area or None,
         "job_dept": dept or None,
     }
 
 
 def huawei_jobs(_url=None, max_items: int = 40) -> list:
-    """华为校招职位。三个项目类型分开问，按 jobId 去重。"""
+    """华为职位。jobType=0 是校招（三个项目类型分开问），jobType=1 是社招。
+    社招只要 10 条：那是给有工作经验的，堆多了对本科生是噪音。"""
     out, seen = [], set()
-    for jt in ("1", "2", "3"):
-        url = ("%s?jobType=0&jobTypes=%s&language=zh_CN&curPage=1&pageSize=20"
-               "&reqTime=%d" % (HUAWEI_JOB_API, jt, int(time.time() * 1000)))
+    plans = [("0", "1", "校招"), ("0", "2", "实习"), ("0", "3", "校招"), ("1", "1", "社招")]
+    for job_type, jt, kind in plans:
+        url = ("%s?jobType=%s&jobTypes=%s&language=zh_CN&curPage=1&pageSize=20"
+               "&reqTime=%d" % (HUAWEI_JOB_API, job_type, jt, int(time.time() * 1000)))
         try:
             data = json.loads(fetch_json(url))
         except Exception as e:
-            print("  [华为招聘] %s 接口失败 %s: %s"
-                  % (HUAWEI_JOB_TYPE_NAME[jt], type(e).__name__, e))
+            print("  [华为招聘] %s/%s 接口失败 %s: %s"
+                  % (HUAWEI_JOB_TYPE_NAME.get(jt, jt), kind, type(e).__name__, e))
             continue
         rows = data.get("result") or []
-        print("  [华为招聘] %s 当前开放 %d 条" % (HUAWEI_JOB_TYPE_NAME[jt], len(rows)))
+        print("  [华为招聘] %s %s 当前开放 %d 条" % (kind, HUAWEI_JOB_TYPE_NAME.get(jt, jt), len(rows)))
         for j in rows:
+            if kind == "社招" and len([x for x in out if x.get("kind") == "社招"]) >= 10:
+                break
             jid = j.get("jobId")
             if not jid or jid in seen:
                 continue
             seen.add(jid)
-            out.append(huawei_item(j, jt))
-    return out[:max_items]
+            out.append(huawei_item(j, jt, kind))
+    return out
 
 
 # ---------------- 小米 ----------------
@@ -650,7 +654,7 @@ XIAOMI_JOB_API = "https://hr.xiaomi.com/website/api/agent/searchJobPage"
 XIAOMI_REFERER = "https://hr.xiaomi.com/opportunities.html"
 
 
-def xiaomi_item(j: dict) -> dict:
+def xiaomi_item(j: dict, kind: str = "校招") -> dict:
     """把小米接口的一条职位翻成我们自己的格式。"""
     title = (j.get("title") or "").strip()
     cities = j.get("cityZhNames") or []
@@ -684,39 +688,48 @@ def xiaomi_item(j: dict) -> dict:
         "jobcat": guess_job_cat(title, dept),
         "source": "小米招聘",
         "source_type": "小米招聘",
-        "job_type": "校招",
+        "job_type": kind,
         "job_dept": dept or None,
     }
 
 
-def xiaomi_jobs(_url=None, max_items: int = 20) -> list:
-    """小米校招职位。type=2 是校招（约 1060 条），一页 100 条。"""
+def _xiaomi_page(type_id: int, kind: str, cap: int) -> list:
+    """拉小米某一类（2=校招 / 3=实习 / 1=社招）的前 cap 条。"""
     out, seen = [], set()
     page, page_total = 1, 1
-    while page <= page_total and len(out) < max_items:
-        url = ("%s?keyword=&cityZhNames=&pageNum=%d&pageSize=100&type=2&_t=%d"
-               % (XIAOMI_JOB_API, page, int(time.time() * 1000)))
+    while page <= page_total and len(out) < cap:
+        url = ("%s?keyword=&cityZhNames=&pageNum=%d&pageSize=60&type=%d&_t=%d"
+               % (XIAOMI_JOB_API, page, type_id, int(time.time() * 1000)))
         try:
             data = json.loads(fetch_json(url, referer=XIAOMI_REFERER))
         except Exception as e:
-            print("  [小米招聘] 第 %d 页失败 %s: %s" % (page, type(e).__name__, e))
+            print("  [小米招聘] %s 第 %d 页失败 %s: %s" % (kind, page, type(e).__name__, e))
             break
         d = data.get("data") or {}
         rows = d.get("list") or []
         page_total = int(d.get("pageTotal") or 1)
         if page == 1:
-            print("  [小米招聘] 校招共 %s 条，%d 页" % (d.get("total"), page_total))
+            print("  [小米招聘] %s共 %s 条" % (kind, d.get("total")))
         for j in rows:
             jid = j.get("id")
             if not jid or jid in seen:
                 continue
             seen.add(jid)
-            out.append(xiaomi_item(j))
-            if len(out) >= max_items:
+            out.append(xiaomi_item(j, kind))
+            if len(out) >= cap:
                 break
         page += 1
+    return out
+
+
+def xiaomi_jobs(_url=None, max_items: int = 20) -> list:
+    """小米职位：校招 20 条 + 实习 6 条 + 社招 10 条。
+    社招是给有工作经验的人，只取一点当参考，不然会把校招淹掉。"""
+    out = _xiaomi_page(2, "校招", max_items)
+    out += _xiaomi_page(3, "实习", 6)
+    out += _xiaomi_page(1, "社招", 10)
     print("  [小米招聘] 取到 %d 条" % len(out))
-    return out[:max_items]
+    return out
 
 
 # ---------------- 比亚迪 ----------------
@@ -949,7 +962,7 @@ def moka_jobs(firm: str, portal: str, org: str, site: str, max_items: int = 20):
 # 站点注册表：以后加一个新来源，就在这里加一行，别的都不用动
 # ---------------- 美团校招（zhaopin.meituan.com，匿名 JSON 接口） ----------------
 MEITUAN_API = "https://zhaopin.meituan.com/api/official/job/getJobList"
-MEITUAN_TYPE = {"1": "校招", "2": "实习"}
+MEITUAN_TYPE = {"1": "校招", "2": "实习", "3": "社招"}
 
 
 def meituan_item(j: dict) -> dict:
@@ -986,37 +999,50 @@ def meituan_item(j: dict) -> dict:
     }
 
 
-def meituan_jobs(_url=None, max_items: int = 20) -> list:
-    """美团校招+实习（实测 572 条）。分页参数必须嵌在 page 对象里。"""
+def _meituan_page(codes, cap: int, label: str) -> list:
     out, seen, page = [], set(), 1
-    while len(out) < max_items and page <= 10:
+    while len(out) < cap and page <= 10:
         body = {"page": {"pageNo": page, "pageSize": 50},
-                "jobType": [{"code": "1"}, {"code": "2"}]}
+                "jobType": [{"code": c} for c in codes]}
         try:
             data = json.loads(fetch_post_json(
                 MEITUAN_API, body,
                 referer="https://zhaopin.meituan.com/web/campus",
                 origin="https://zhaopin.meituan.com"))
         except Exception as e:
-            print("  [美团招聘] 接口失败 %s: %s" % (type(e).__name__, e))
+            print("  [美团招聘] %s 接口失败 %s: %s" % (label, type(e).__name__, e))
             return out
         block = data.get("data") or {}
         rows = block.get("list") or []
         if not rows:
             break
         if page == 1:
-            print("  [美团招聘] 校招+实习 %s 条，取前 %d 条" % (
-                (block.get("page") or {}).get("totalCount"), min(len(rows), max_items)))
+            print("  [美团招聘] %s %s 条" % (label, (block.get("page") or {}).get("totalCount")))
         for j in rows:
             jid = str(j.get("jobUnionId") or "")
             if not jid or jid in seen:
                 continue
             seen.add(jid)
             out.append(j)
-            if len(out) >= max_items:
+            if len(out) >= cap:
                 break
         page += 1
-    return [meituan_item(j) for j in out[:max_items]]
+    return out
+
+
+def meituan_jobs(_url=None, max_items: int = 20) -> list:
+    """美团职位：校招+实习（code 1/2）+ 社招（code 3，只取 10 条）。
+    分页参数必须嵌在 page 对象里。"""
+    out, seen = [], set()
+    for codes, cap, label in ((( "1", "2"), max_items, "校招+实习"),
+                              (("3",), 10, "社招")):
+        for j in _meituan_page(codes, cap, label):
+            jid = str(j.get("jobUnionId") or "")
+            if jid in seen:
+                continue
+            seen.add(jid)
+            out.append(meituan_item(j))
+    return out
 
 
 # ---------------- 字节跳动校招（jobs.bytedance.com，需先取 CSRF token） ----------------
@@ -1207,6 +1233,10 @@ def main() -> int:
             seen_url.add(it["url"])
             if it.get("jobcat") == "职能":
                 it["subcat"] = guess_job_sub(it.get("title", ""))
+            # 校招 / 社招 / 实习：岗位条目的第三级分类，页面上单独一行筛
+            if it.get("group") == "就业":
+                jt = it.get("job_type") or ""
+                it["kind"] = "社招" if "社招" in jt else ("实习" if "实习" in jt else "校招")
             result.append(it)
             dl = it["deadline"] or "无截止日期"
             print("  [%s %d] %s  %-12s %s" % (src["name"], i, it["published_at"], dl, it["title"][:34]))
