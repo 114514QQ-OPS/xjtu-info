@@ -1,19 +1,32 @@
-﻿// 离线可用的最小 service worker：
-// 壳（HTML / 图标 / manifest）用 cache-first，数据 feed.json 用 network-first。
-// 这样断网时还能看到上一次的通知，联网后拿到新的。
-const CACHE = 'xjtu-info-v2';
+// 离线可用的 service worker。
+// 关键：页面本身（HTML）也必须 network-first —— 否则部署了新页面，老用户还一直看缓存里的旧页面，
+// 而数据文件已经换成新的拆分格式，就会出现「就业 0 条」这种旧壳配新数据的事故。
+const CACHE = 'xjtu-info-v3';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png'];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+    caches.keys()
+      .then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
+
+function networkFirst(req) {
+  return fetch(req, { cache: 'no-store' }).then((r) => {
+    if (r && r.status === 200) {
+      const copy = r.clone();
+      caches.open(CACHE).then((c) => c.put(req, copy));
+    }
+    return r;
+  }).catch(() => caches.match(req).then((hit) => hit || Response.error()));
+}
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
@@ -21,19 +34,15 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
 
-  // 数据：先网络，失败再拿缓存（保证看到的是最新一次成功抓取）
-  if (url.pathname.endsWith('/feed.json')) {
-    e.respondWith(
-      fetch(req).then((r) => {
-        const copy = r.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy));
-        return r;
-      }).catch(() => caches.match(req))
-    );
+  // 页面与数据一律先网络：宁可慢一点，也不能让人看旧页面配新数据
+  const isDoc = req.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('.html');
+  const isData = /\/feed[^/]*\.json$/.test(url.pathname) || url.pathname.endsWith('.ics');
+  if (isDoc || isData) {
+    e.respondWith(networkFirst(req));
     return;
   }
 
-  // 壳：先缓存，后台再更新
+  // 图标等静态资源：先缓存，后台再更新
   e.respondWith(
     caches.match(req).then((hit) => {
       const net = fetch(req).then((r) => {
@@ -47,4 +56,3 @@ self.addEventListener('fetch', (e) => {
     })
   );
 });
-
