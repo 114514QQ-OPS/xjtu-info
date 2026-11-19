@@ -29,6 +29,8 @@ from urllib.parse import urljoin
 
 BASE = "https://jwc.xjtu.edu.cn/"
 LIST_URL = "https://jwc.xjtu.edu.cn/jxxx/jxtz2.htm"
+# 列表页最新一条超过这么多天，就当这个源停更了：只记「接了」，不再逐条抓详情
+STALE_DAYS = 120
 
 # 有些学校的证书链不全，关掉校验才能连上（只影响本校站点，可以接受）
 CTX = ssl.create_default_context()
@@ -1165,6 +1167,27 @@ def main() -> int:
             print("  [%s] 列表页失败 %s: %s" % (src["name"], type(e).__name__, e))
             continue
         cap = len(listed) if src.get("detail") is False else args.limit
+
+        # 停更检测：列表页最新一条都超过 STALE_DAYS 天，说明这个源已经没人维护了，
+        # 就不用再为它逐条开详情页（每个源 12 次请求，纯浪费）。
+        stale = False
+        if src.get("detail", True) and listed:
+            newest = None
+            for cand in listed:
+                d = cand.get("published_at")
+                if d and (newest is None or str(d) > str(newest)):
+                    newest = d
+            if newest:
+                try:
+                    nd = date.fromisoformat(str(newest)[:10])
+                    if (today - nd).days > STALE_DAYS:
+                        stale = True
+                        print("%s 最新一条是 %s（%d 天前），判定停更，跳过详情抓取"
+                              % (src["name"], newest, (today - nd).days))
+                except Exception:
+                    pass
+        if stale:
+            cap = 0
         if src.get("detail", True):
             print("%s 列表页 %d 条，取前 %d 条抓详情" % (src["name"], len(listed), min(cap, len(listed))))
         else:
