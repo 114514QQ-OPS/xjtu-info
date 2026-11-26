@@ -327,6 +327,11 @@ body{background:var(--paper);}
 .more summary{font-size:11px;color:var(--ink-3);letter-spacing:.08em;cursor:pointer}
 .more summary:hover{color:var(--ink)}
 .more-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:12px 0 4px}
+.loaderr{max-width:800px;margin:14px auto 0;padding:13px 15px;border:1px solid #E0B9B2;background:#FBF1EF;color:var(--accent);font-size:12.5px;line-height:1.65;border-radius:3px}
+.loaderr b{font-weight:600}
+.loaderr span{display:block;color:var(--ink-2);margin-top:3px}
+.loaderr button{margin-top:9px;font:inherit;font-size:12px;padding:5px 12px;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:2px;cursor:pointer}
+.loaderr button:disabled{opacity:.6;cursor:default}
 .more-grid ul{list-style:none;margin:0;padding:0}
 .more-grid li{display:flex;gap:8px;align-items:baseline;font-size:11.5px;color:var(--ink-2);padding:3px 0}
 footer{border-top:1px solid var(--line);margin-top:22px;padding:14px 0 30px;display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--ink-3)}
@@ -1056,16 +1061,20 @@ footer a:hover{color:var(--accent)}
     })
     .catch(function(err){
       var box=document.createElement('div');
-      box.style.cssText='margin:12px 0;padding:11px 13px;border:1px solid #E0B9B2;background:#FBF1EF;'
-                      +'color:#A9362B;font-size:12.5px;line-height:1.6;border-radius:2px';
-      box.innerHTML='<b>没读到 feed.json（'+esc(err.message)+'）</b><br>'
-        +'如果你是把 index.html 直接双击打开的，浏览器会禁止本地 fetch。'
-        +'先在这个文件夹里运行 <code>python -m http.server 8777</code>，'
-        +'再访问 <code>http://127.0.0.1:8777/</code>。';
-      document.querySelector('.layout').parentNode.insertBefore(
-        box, document.querySelector('.layout'));
+      box.className='loaderr';
+      box.innerHTML='<b>数据没拉到</b>（'+esc(err.message)+'）'
+        +'<span>网络抖了一下，或者 github.io 这会儿不通。</span>'
+        +'<button type="button" id="retry">重试</button>';
+      var host=document.querySelector('.main') || document.body;
+      var feedEl=document.getElementById('feed');
+      host.insertBefore(box, feedEl);
+      var rb=document.getElementById('retry');
+      if(rb) rb.addEventListener('click', function(){
+        rb.disabled=true; rb.textContent='重试中…';
+        location.reload();
+      });
       empty.style.display='block';
-      empty.innerHTML='<b>数据没加载出来</b>见上面那行提示';
+      empty.innerHTML='';
     });
 })();
 
